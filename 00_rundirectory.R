@@ -27,7 +27,7 @@ p_load(
   osmdata,
   
   # Modelado
-  caret, glmnet, naivebayes, ranger, xgboost, lightgbm, bonsai, tinymodels, spatialsample,
+  caret, glmnet, naivebayes, ranger, xgboost, lightgbm, bonsai, rlang, tidymodels, spatialsample, recipes,
   
   # Métricas
   yardstick, MLmetrics, 
@@ -55,7 +55,7 @@ paths <- list(
   processed   = here("00_data", "01_processed"),
   functions   = here("01_R",    "00_functions"),
   models      = here("02_models"),
-  training    = here("02_models", "00_classes"),
+  training    = here("02_models", "00_training"),
   submissions = here("02_models", "01_submissions"),
   LR          = here("02_models", "01_submissions", "00_linear_regression"),
   EN          = here("02_models", "01_submissions", "01_elastic_net"),
@@ -91,16 +91,19 @@ source(here(paths$process, "01_text_variables.R"))
 toc(log = TRUE)
 
 tic("Variables espaciales")
-source(here(paths$process, "02_spatial_variables.R"))
+source(here(paths$process, "02_spatial_variables.R")) #WIP
 toc(log = TRUE)
 
 ## 2. Feature Engineering  ---------------------------------------------------
 
-
-
+# WIP
 
 ## 3. Modelado ---------------------------------------------------------------
 
-## 4. Analisis presentación ---------------------------------------------------
+tic(" 1. Regresión lineal")
+source(here(paths$training, "00_linear_regression.R"))
+toc(log = TRUE)
+
+## 4. Analisis presentación --------------------------------------------------
 
 

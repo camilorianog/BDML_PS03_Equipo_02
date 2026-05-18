@@ -39,3 +39,7 @@ vars_winsorizar <- c(
 train <- train |> mutate(across(all_of(vars_winsorizar), winsorizr))
 test  <- test  |> mutate(across(all_of(vars_winsorizar), winsorizr))
 
+# --- Log price (solo train) -------------------------------------------------
+
+train <- train |> mutate(log_price = log(price))
+

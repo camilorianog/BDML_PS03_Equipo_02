@@ -22,6 +22,7 @@ generar_submission <- function(modelo_final, nombre) {
   
   submission <- predict(modelo_final, test) %>%
     bind_cols(test %>% select(property_id)) %>%
+    mutate(.pred = exp(.pred)) %>%
     select(property_id, price = .pred)
   
   write_csv(submission, here(subfolder, paste0(nombre, ".csv")))
