@@ -2,3 +2,12 @@
 .Rhistory
 .RData
 .Ruserdata
+00_data/01_processed/
+02_models/00_classes/
+00_data/00_raw/*.shp
+00_data/00_raw/*.dbf
+00_data/00_raw/*.sbn
+00_data/00_raw/*.sbx
+00_data/00_raw/*.shx
+00_data/00_raw/*.cpg
+00_data/00_raw/*.prj
