@@ -107,11 +107,11 @@ toc(log = TRUE)
 ## 4. Modelos -------------------------------------------------------------
 
 tic("Modelos lineales — OLS + Elastic Net")
-source(here(paths$process, "05_models_linear.R"))
+source(here(paths$training, "05_models_linear.R"))
 toc(log = TRUE)
 
 tic("Modelos de árboles — CART + Random Forest")
-source(here(paths$process, "06_models_tree.R"))
+source(here(paths$training, "06_models_tree.R"))
 toc(log = TRUE)
 
 # PRÓXIMOS SCRIPTS (WIP):

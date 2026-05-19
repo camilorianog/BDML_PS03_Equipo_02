@@ -3,32 +3,69 @@
 # Variables espaciales derivadas de OpenStreetMap
 # ============================================================
 # Team 02 — Problem Set 03
-# Variables construidas:
-#   DISTANCIAS al punto más cercano (metros):
-#     dist_cafe, dist_bus, dist_metro, dist_hospital,
-#     dist_colegio, dist_universidad, dist_parque, dist_super
-#   DENSIDADES conteo en buffer:
-#     n_cafes_500m, n_rest_500m, n_farmacias_500m,
-#     n_bancos_500m, n_gym_500m, n_lamparas_200m
-#   BINARIAS:
-#     is_residential
-#   ADMINISTRATIVAS (join espacial):
-#     ESTRATO, CODIGO_UPZ, NOMBRE_UPZ, LocCodigo, LocNombre
 # ============================================================
 
 # --- Helpers -----------------------------------------------------------------
 
+options(timeout = 2500)
+
+# bbox fija basada en cobertura real de los datos
+bbox_bogota <- c(
+  min_lon = -74.3,
+  min_lat =  4.6,
+  max_lon = -74,
+  max_lat =  4.9
+)
+
+# cache local OSM
+osm_cache <- here(paths$raw, "osm_cache")
+dir.create(osm_cache, recursive = TRUE, showWarnings = FALSE)
+
 #' Descarga puntos OSM para key = value en bbox de Bogotá
-get_osm_points <- function(key, value, bbox = getbb("Bogota Colombia")) {
+get_osm_points <- function(key, value, bbox = bbox_bogota) {
+  
+  cache_file <- here(
+    osm_cache,
+    paste0(key, "_", value, ".rds")
+  )
+  
+  # usar cache si existe
+  if (file.exists(cache_file)) {
+    message("  Loading cache: ", key, " = ", value)
+    return(readRDS(cache_file))
+  }
+  
   message("  OSM: ", key, " = ", value)
-  q   <- opq(bbox = bbox) |> add_osm_feature(key = key, value = value)
+  
+  q <- opq(bbox = bbox) |>
+    add_osm_feature(key = key, value = value)
+  
   raw <- osmdata_sf(q)
-  raw$osm_points |> dplyr::select(osm_id) |> st_as_sf(crs = 4326)
+  
+  obj <- raw$osm_points |>
+    dplyr::select(osm_id) |>
+    st_as_sf(crs = 4326)
+  
+  saveRDS(obj, cache_file)
+  
+  obj
 }
 
 #' Distancia mínima (metros) desde cada fila de base_sf a target_sf
+#' versión eficiente
 dist_min <- function(base_sf, target_sf) {
-  as.numeric(apply(st_distance(base_sf, target_sf), 1, min))
+  
+  idx <- st_nearest_feature(base_sf, target_sf)
+  
+  nearest <- target_sf[idx, ]
+  
+  as.numeric(
+    st_distance(
+      base_sf,
+      nearest,
+      by_element = TRUE
+    )
+  )
 }
 
 #' Conteo de features OSM dentro de un buffer (radio en metros)
@@ -62,7 +99,6 @@ train$dist_bus  <- dist_min(train, bus_sf)
 test$dist_bus   <- dist_min(test,  bus_sf)
 
 # A3. Metro / cable -----------------------------------------------------------
-#     Chapinero tiene estaciones del metro de Bogotá → premium importante
 metro_sf           <- get_osm_points("railway", "station")
 train$dist_metro   <- dist_min(train, metro_sf)
 test$dist_metro    <- dist_min(test,  metro_sf)
@@ -78,15 +114,14 @@ train$dist_colegio  <- dist_min(train, colegio_sf)
 test$dist_colegio   <- dist_min(test,  colegio_sf)
 
 # A6. Universidades -----------------------------------------------------------
-#     Chapinero: Uniandes, Javeriana, Rosario, EAN, etc.
 univ_sf                <- get_osm_points("amenity", "university")
 train$dist_universidad <- dist_min(train, univ_sf)
 test$dist_universidad  <- dist_min(test,  univ_sf)
 
 # A7. Parques -----------------------------------------------------------------
-#     Polígonos → centroide como proxy de acceso
-q_parques   <- opq(bbox = getbb("Bogota Colombia")) |>
+q_parques   <- opq(bbox = bbox_bogota) |>
   add_osm_feature(key = "leisure", value = "park")
+
 parques_sf  <- osmdata_sf(q_parques)$osm_polygons |>
   dplyr::select(osm_id) |>
   st_centroid()
@@ -127,7 +162,7 @@ gym_sf           <- get_osm_points("leisure", "fitness_centre")
 train$n_gym_500m <- count_buffer(train_m, gym_sf, 500)
 test$n_gym_500m  <- count_buffer(test_m,  gym_sf, 500)
 
-# B6. Alumbrado público en 200 m (proxy seguridad nocturna) -------------------
+# B6. Alumbrado público en 200 m ----------------------------------------------
 lamp_sf               <- get_osm_points("highway", "street_lamp")
 train$n_lamparas_200m <- count_buffer(train_m, lamp_sf, 200)
 test$n_lamparas_200m  <- count_buffer(test_m,  lamp_sf, 200)
@@ -137,8 +172,8 @@ test$n_lamparas_200m  <- count_buffer(test_m,  lamp_sf, 200)
 # =============================================================
 
 # C1. Zona de uso residencial -------------------------------------------------
-res_poly     <- osmdata_sf(
-  opq(bbox = getbb("Bogota Colombia")) |>
+res_poly <- osmdata_sf(
+  opq(bbox = bbox_bogota) |>
     add_osm_feature(key = "landuse", value = "residential")
 )$osm_polygons
 
@@ -148,8 +183,8 @@ test$is_residential  <- as.integer(lengths(st_within(test,  res_poly)) > 0)
 # =============================================================
 # BLOQUE D — CAPAS ADMINISTRATIVAS (join espacial)
 # =============================================================
+
 # D1. Estratos ----------------------------------------------------------------
-#     ManzanaEstratificacion.shp — CRS: PCS_CarMAGBOG → transform 4326
 estratos <- st_read(here(paths$raw, "ManzanaEstratificacion.shp"), quiet = TRUE) |>
   st_transform(4326) |>
   st_make_valid()
@@ -157,30 +192,40 @@ estratos <- st_read(here(paths$raw, "ManzanaEstratificacion.shp"), quiet = TRUE)
 train <- st_join(train, estratos |> dplyr::select(ESTRATO), join = st_intersects)
 test  <- st_join(test,  estratos |> dplyr::select(ESTRATO), join = st_intersects)
 
-
 # D2. UPZ ---------------------------------------------------------------------
-#     EPT_UPZ.shp — CRS: PCS_CarMAGBOG → transform 4326
-#     EPT = Espacio Público Total (m2/hab) → predictor extra de calidad urbana
 upz <- st_read(here(paths$raw, "EPT_UPZ.shp"), quiet = TRUE) |>
   st_transform(4326) |>
   st_make_valid()
 
-train <- st_join(train, upz |> dplyr::select(CODIGO_UPZ, NOMBRE, EPT, AREA_HECTA),
-                 join = st_intersects)
-test  <- st_join(test,  upz |> dplyr::select(CODIGO_UPZ, NOMBRE, EPT, AREA_HECTA),
-                 join = st_intersects)
+train <- st_join(
+  train,
+  upz |> dplyr::select(CODIGO_UPZ, NOMBRE, EPT, AREA_HECTA),
+  join = st_intersects
+)
+
+test <- st_join(
+  test,
+  upz |> dplyr::select(CODIGO_UPZ, NOMBRE, EPT, AREA_HECTA),
+  join = st_intersects
+)
 
 # D3. Localidades -------------------------------------------------------------
-#     Loca.shp — CRS: EPSG:4686 → transform 4326
-#     LocCodigo y LocNombre necesarios para CV espacial (04_cv_setup.R)
 localidades <- st_read(here(paths$raw, "Loca.shp"), quiet = TRUE) |>
   st_transform(4326) |>
   st_make_valid()
 
-train <- st_join(train, localidades |> dplyr::select(LocCodigo, LocNombre),
-                 join = st_intersects)
-test  <- st_join(test,  localidades |> dplyr::select(LocCodigo, LocNombre),
-                 join = st_intersects)
+train <- st_join(
+  train,
+  localidades |> dplyr::select(LocCodigo, LocNombre),
+  join = st_intersects
+)
+
+test <- st_join(
+  test,
+  localidades |> dplyr::select(LocCodigo, LocNombre),
+  join = st_intersects
+)
+
 # =============================================================
 # GUARDAR
 # =============================================================
