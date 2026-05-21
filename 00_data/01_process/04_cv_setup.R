@@ -17,7 +17,18 @@ p_load(tidymodels, rsample)
 
 # --- Cargar ------------------------------------------------------------------
 
-train <- readRDS(here(paths$processed, "train_model.rds"))
+if (exists("train", envir = .GlobalEnv)) {
+  train <- get("train", envir = .GlobalEnv)
+  message("04_cv_setup.R  |  usando train en memoria")
+} else if (file.exists(here(paths$processed, "train_model.rds"))) {
+  train <- readRDS(here(paths$processed, "train_model.rds"))
+  message("04_cv_setup.R  |  cargando train_model.rds")
+} else {
+  stop(
+    "No hay 'train' en memoria ni train_model.rds. Ejecuta 03_imputation.R primero.",
+    call. = FALSE
+  )
+}
 
 # Reconvertir a sf
 train_sf <- train |>

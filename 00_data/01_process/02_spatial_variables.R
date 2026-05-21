@@ -23,6 +23,39 @@ bbox_bogota <- c(
 osm_cache <- here(paths$raw, "osm_cache")
 dir.create(osm_cache, recursive = TRUE, showWarnings = FALSE)
 
+#' Helper: llama osmdata_sf rotando servidores Overpass en caso de 429
+osm_fetch_with_retry <- function(q, max_tries = 6, wait_sec = 10) {
+
+  overpass_servers <- c(
+    "https://overpass.kumi.systems/api/interpreter",
+    "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
+    "https://overpass.openstreetmap.ru/api/interpreter",
+    "https://overpass-api.de/api/interpreter"
+  )
+
+  for (i in seq_len(max_tries)) {
+
+    server <- overpass_servers[((i - 1) %% length(overpass_servers)) + 1]
+    osmdata::set_overpass_url(server)
+
+    result <- tryCatch(
+      osmdata_sf(q),
+      error = function(e) {
+        msg <- conditionMessage(e)
+        if (grepl("429|Too Many|rate.limit|backoff", msg, ignore.case = TRUE)) {
+          message("  429 en ", server, " — cambiando servidor, espero ", wait_sec, "s (intento ", i, "/", max_tries, ")")
+          Sys.sleep(wait_sec)
+          NULL
+        } else {
+          stop(e)
+        }
+      }
+    )
+    if (!is.null(result)) return(result)
+  }
+  stop("Todos los servidores Overpass devolvieron 429. Intentos agotados.")
+}
+
 #' Descarga puntos OSM para key = value en bbox de Bogotá
 get_osm_points <- function(key, value, bbox = bbox_bogota) {
   
@@ -42,9 +75,19 @@ get_osm_points <- function(key, value, bbox = bbox_bogota) {
   q <- opq(bbox = bbox) |>
     add_osm_feature(key = key, value = value)
   
-  raw <- osmdata_sf(q)
-  
-  obj <- raw$osm_points |>
+  raw <- osm_fetch_with_retry(q)
+
+  pts <- raw$osm_points
+  if (is.null(pts) || nrow(pts) == 0) {
+    # fallback: centroides de polígonos (e.g. cafés mapeados como edificio)
+    polys <- raw$osm_polygons
+    pts <- if (!is.null(polys) && nrow(polys) > 0) st_centroid(polys) else NULL
+  }
+  if (is.null(pts) || nrow(pts) == 0) {
+    warning("  Sin geometría encontrada para: ", key, " = ", value)
+    return(sf::st_sf(osm_id = character(0), geometry = sf::st_sfc(crs = 4326)))
+  }
+  obj <- pts |>
     dplyr::select(osm_id) |>
     st_as_sf(crs = 4326)
   
@@ -53,10 +96,59 @@ get_osm_points <- function(key, value, bbox = bbox_bogota) {
   obj
 }
 
+#' Descarga polígonos OSM para key = value en bbox de Bogotá
+get_osm_polygons <- function(key, value, bbox = bbox_bogota) {
+
+  cache_file <- here(
+    osm_cache,
+    paste0(key, "_", value, "_poly.rds")
+  )
+
+  if (file.exists(cache_file)) {
+    message("  Loading cache: ", key, " = ", value, " (polygons)")
+    return(readRDS(cache_file))
+  }
+
+  message("  OSM polygons: ", key, " = ", value)
+
+  q <- opq(bbox = bbox) |>
+    add_osm_feature(key = key, value = value)
+
+  raw <- osm_fetch_with_retry(q)
+
+  # Combinar polygons y multipolygons (en OSM los parques suelen ser relaciones)
+  polys  <- raw$osm_polygons
+  mpolys <- raw$osm_multipolygons
+
+  combined <- dplyr::bind_rows(
+    if (!is.null(polys)  && nrow(polys)  > 0) dplyr::select(polys,  osm_id) else NULL,
+    if (!is.null(mpolys) && nrow(mpolys) > 0) dplyr::select(mpolys, osm_id) else NULL
+  )
+
+  if (is.null(combined) || nrow(combined) == 0) {
+    warning("  Sin polígonos encontrados para: ", key, " = ", value)
+    return(sf::st_sf(osm_id = character(0), geometry = sf::st_sfc(crs = 4326)))
+  }
+
+  obj <- combined |> st_make_valid()
+
+  saveRDS(obj, cache_file)
+
+  obj
+}
+
+#' sf vacío con geometría POINT (misma clase que st_centroid / get_osm_points)
+empty_point_sf <- function() {
+  st_sf(osm_id = "._", geometry = st_sfc(st_point(c(0, 0)), crs = 4326))[0, ]
+}
+
 #' Distancia mínima (metros) desde cada fila de base_sf a target_sf
 #' versión eficiente
 dist_min <- function(base_sf, target_sf) {
-  
+  if (nrow(target_sf) == 0L) {
+    return(rep(NA_real_, nrow(base_sf)))
+  }
+
   idx <- st_nearest_feature(base_sf, target_sf)
   
   nearest <- target_sf[idx, ]
@@ -121,13 +213,12 @@ train$dist_universidad <- dist_min(train, univ_sf)
 test$dist_universidad  <- dist_min(test,  univ_sf)
 
 # A7. Parques -----------------------------------------------------------------
-q_parques   <- opq(bbox = bbox_bogota) |>
-  add_osm_feature(key = "leisure", value = "park")
-
-parques_sf  <- osmdata_sf(q_parques)$osm_polygons |>
-  dplyr::select(osm_id) |>
-  st_centroid()
-
+parques_poly <- get_osm_polygons("leisure", "park")
+parques_sf <- if (nrow(parques_poly) > 0L) {
+  st_centroid(parques_poly)
+} else {
+  empty_point_sf()
+}
 train$dist_parque <- dist_min(train, parques_sf)
 test$dist_parque  <- dist_min(test,  parques_sf)
 
@@ -174,11 +265,7 @@ test$n_lamparas_200m  <- count_buffer(test_m,  lamp_sf, 200)
 # =============================================================
 
 # C1. Zona de uso residencial -------------------------------------------------
-res_poly <- osmdata_sf(
-  opq(bbox = bbox_bogota) |>
-    add_osm_feature(key = "landuse", value = "residential")
-)$osm_polygons
-
+res_poly             <- get_osm_polygons("landuse", "residential")
 train$is_residential <- as.integer(lengths(st_within(train, res_poly)) > 0)
 test$is_residential  <- as.integer(lengths(st_within(test,  res_poly)) > 0)
 

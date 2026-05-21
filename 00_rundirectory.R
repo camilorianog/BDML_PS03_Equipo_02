@@ -27,7 +27,7 @@ p_load(
   osmdata,
   
   # Modelado
-  caret, glmnet, naivebayes, ranger, xgboost, lightgbm, bonsai, rlang, tidymodels, spatialsample, recipes,
+  caret, glmnet, naivebayes, ranger, xgboost, lightgbm, bonsai, rlang, tidymodels, spatialsample, recipes, brulee,
   
   # Métricas
   yardstick, MLmetrics, 
@@ -94,16 +94,30 @@ tic("Variables espaciales")
 source(here(paths$process, "02_spatial_variables.R")) #WIP
 toc(log = TRUE)
 
+tic("Imputación")
+source(here(paths$process, "03_imputation.R"))
+toc(log = TRUE)
+
 ## 2. Feature Engineering  ---------------------------------------------------
 
 # WIP
 
-## 3. Modelado ---------------------------------------------------------------
+## 3. CV (tidymodels) --------------------------------------------------------
+
+tic("CV setup")
+source(here(paths$process, "04_cv_setup.R"))
+toc(log = TRUE)
+
+## 4. Modelado ---------------------------------------------------------------
 
 tic(" 1. Regresión lineal")
 source(here(paths$training, "00_linear_regression.R"))
 toc(log = TRUE)
 
-## 4. Analisis presentación --------------------------------------------------
+tic(" 5. Red neuronal (brulee)")
+source(here(paths$training, "05_neural_network.R"))
+toc(log = TRUE)
+
+## 5. Analisis presentación --------------------------------------------------
 
 

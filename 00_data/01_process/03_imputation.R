@@ -71,8 +71,38 @@ impute_categorical <- function(data, vars, groups) {
 
 # --- Cargar ------------------------------------------------------------------
 
-train <- readRDS(here(paths$processed, "train_spatial.rds")) |> as.data.frame()
-test  <- readRDS(here(paths$processed, "test_spatial.rds"))  |> as.data.frame()
+as_modeling_df <- function(x) {
+  if (inherits(x, "sf")) {
+    x <- sf::st_drop_geometry(x)
+  }
+  as.data.frame(x)
+}
+
+if (exists("train", envir = .GlobalEnv)) {
+  train <- as_modeling_df(get("train", envir = .GlobalEnv))
+  message("03_imputation.R  |  usando train en memoria")
+} else if (file.exists(here(paths$processed, "train_spatial.rds"))) {
+  train <- readRDS(here(paths$processed, "train_spatial.rds")) |> as.data.frame()
+  message("03_imputation.R  |  cargando train_spatial.rds")
+} else {
+  stop(
+    "No hay 'train' en memoria ni train_spatial.rds. Ejecuta 02_spatial_variables.R primero.",
+    call. = FALSE
+  )
+}
+
+if (exists("test", envir = .GlobalEnv)) {
+  test <- as_modeling_df(get("test", envir = .GlobalEnv))
+  message("03_imputation.R  |  usando test en memoria")
+} else if (file.exists(here(paths$processed, "test_spatial.rds"))) {
+  test <- readRDS(here(paths$processed, "test_spatial.rds")) |> as.data.frame()
+  message("03_imputation.R  |  cargando test_spatial.rds")
+} else {
+  stop(
+    "No hay 'test' en memoria ni test_spatial.rds. Ejecuta 02_spatial_variables.R primero.",
+    call. = FALSE
+  )
+}
 
 # --- PASO 1: CODIGO_UPZ primero (lo necesitamos para imputar el resto) -------
 # Solo 6 en train y 49 en test → imputar por LocCodigo × property_type
