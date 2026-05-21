@@ -15,7 +15,7 @@ if (!require("pacman", quietly = TRUE)) install.packages("pacman")
 
 p_load(
   # Entorno
-  here, tictoc,
+  here, tictoc, NoSleepR,
   
   # Manipulación de datos
   tidyverse, janitor, skimr, gt, gtsummary, sf, stringr,

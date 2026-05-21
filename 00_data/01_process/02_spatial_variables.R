@@ -5,6 +5,8 @@
 # Team 02 — Problem Set 03
 # ============================================================
 
+nosleep_on(keep_display = FALSE)
+
 # --- Helpers -----------------------------------------------------------------
 
 options(timeout = 2500)
@@ -235,3 +237,5 @@ saveRDS(test,  here(paths$processed, "test_spatial.rds"))
 
 message("02_spatial_variables.R   |  train: ",
         nrow(train), " obs  |  test: ", nrow(test), " obs")
+
+nosleep_off(h)
