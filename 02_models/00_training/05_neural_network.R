@@ -99,9 +99,9 @@ message(
 
 # --- Recipe ------------------------------------------------------------------
 
-recipe_nn <- recipe(price ~ ., data = train) |>
+recipe_nn <- recipe(log_price ~ ., data = train) |>
   step_rm(
-    property_id, description, title,
+    property_id, description, title, price,
     any_of(c("geometry", "shape"))
   ) |>
   step_mutate(property_type = as.factor(property_type)) |>
