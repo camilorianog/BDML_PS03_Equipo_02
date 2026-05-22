@@ -1632,7 +1632,7 @@ saveRDS(
   list(
     performance = tabla_cv_perf,
     risk = tabla_cv_risk,
-    folds = tabla_folds
+    folds = tabla_folds,
 message("  • SHAP analysis")
 message("  • Bias analysis")
 message("  • Catastrophic errors")
