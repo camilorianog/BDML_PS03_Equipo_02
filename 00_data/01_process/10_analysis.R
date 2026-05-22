@@ -775,50 +775,63 @@ save_gt_table(
 # CATASTROPHIC ERRORS
 # ============================================================
 
+cols_top_errors <- c(
+  "CV",
+  "localidad",
+  "estrato",
+  "property_type",
+  "y",
+  "pred",
+  "error",
+  "abs_error",
+  "pct_error"
+)
+
+cols_top_errors <- intersect(
+  cols_top_errors,
+  names(bias_tbl)
+)
+
 top_errors <- bias_tbl |>
+  
+  filter(!is.na(abs_error)) |>
   
   arrange(desc(abs_error)) |>
   
   slice_head(n = 100) |>
   
-  select(
-    CV,
-    localidad,
-    estrato,
-    property_type,
-    y,
-    pred,
-    error,
-    abs_error,
-    pct_error
+  select(all_of(cols_top_errors))
+
+write_csv(
+  top_errors,
+  here(paths$tables, "top_100_catastrophic_errors.csv")
+)
+
+# crear summary SOLO si existe localidad
+if ("localidad" %in% names(top_errors)) {
+  
+  catastrophic_summary <- top_errors |>
+    
+    group_by(localidad) |>
+    
+    summarise(
+      N_catastrophic = n(),
+      Mean_abs_error = mean(abs_error, na.rm = TRUE),
+      .groups = "drop"
+    ) |>
+    
+    arrange(desc(N_catastrophic))
+  
+  write_csv(
+    catastrophic_summary,
+    here(paths$tables, "catastrophic_error_summary.csv")
   )
-
-write_csv(
-  catastrophic_summary,
-  here(paths$tables, "catastrophic_error_summary.csv")
-)
-
-save_gt_table(
-  catastrophic_summary,
-  "catastrophic_error_summary"
-)
-
-catastrophic_summary <- top_errors |>
   
-  group_by(localidad) |>
-  
-  summarise(
-    N_catastrophic = n(),
-    Mean_abs_error = mean(abs_error),
-    .groups = "drop"
-  ) |>
-  
-  arrange(desc(N_catastrophic))
-
-write_csv(
-  catastrophic_summary,
-  here(paths$tables, "catastrophic_error_summary.csv")
-)
+  save_gt_table(
+    catastrophic_summary,
+    "catastrophic_error_summary"
+  )
+}
 
 # ============================================================
 # RISK ANALYSIS
