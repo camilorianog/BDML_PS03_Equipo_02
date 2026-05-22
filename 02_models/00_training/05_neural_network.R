@@ -23,13 +23,13 @@
 #                  "folds_spatial"     — leave-location-out
 #                  "folds_spatial_upz" — leave-UPZ-out
 
-NN_HIDDEN    <- c(32, 16)
-NN_PENALTY   <- 0.01
-NN_LEARN_RATE <- 0.01
-NN_EPOCHS    <- 100
+NN_HIDDEN     <- c(128, 64, 32)
+NN_PENALTY    <- 0.001
+NN_LEARN_RATE <- 0.001
+NN_EPOCHS     <- 300
 NN_ACTIVATION <- "relu"
-NN_DROPOUT   <- 0
-CV_SET       <- "folds_std"
+NN_DROPOUT    <- 0
+CV_SET        <- "folds_std"
 
 # --- Datos -------------------------------------------------------------------
 
