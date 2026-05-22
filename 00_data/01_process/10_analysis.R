@@ -13,7 +13,9 @@ p_load(
   xgboost,
   yardstick,
   patchwork,
-  gt,
+  flextable,
+  officer,
+  webshot2,
   tictoc,
   here,
   purrr,
@@ -31,33 +33,229 @@ folds_spatial_upz <- readRDS(here(paths$processed, "folds_spatial_upz.rds"))
 folds_norte       <- readRDS(here(paths$processed, "folds_norte.rds"))
 
 # ============================================================
-# HELPER EXPORT GT TABLES
+# HELPER EXPORT FLEXTABLE PNG
 # ============================================================
 
-save_gt_table <- function(df, file_name, digits = 2) {
+save_gt_table <- function(
+    df,
+    file_name,
+    title = NULL,
+    subtitle = NULL,
+    source_note = NULL,
+    pct_cols = NULL,
+    currency_cols = NULL,
+    digits = 2
+) {
   
-  gt_tbl <- df |>
+  df_export <- df
+  
+  # ==========================================================
+  # FORMAT PERCENT
+  # ==========================================================
+  
+  if (!is.null(pct_cols)) {
     
-    gt() |>
+    pct_cols <- intersect(pct_cols, names(df_export))
     
-    fmt_number(
-      columns = where(is.numeric),
-      decimals = digits
-    ) |>
+    df_export <- df_export |>
+      
+      mutate(
+        across(
+          all_of(pct_cols),
+          ~ percent(.x, accuracy = 0.1)
+        )
+      )
+  }
+  
+  # ==========================================================
+  # FORMAT CURRENCY
+  # ==========================================================
+  
+  if (!is.null(currency_cols)) {
     
-    tab_options(
-      table.font.size = px(12),
-      data_row.padding = px(4)
+    currency_cols <- intersect(
+      currency_cols,
+      names(df_export)
+    )
+    
+    df_export <- df_export |>
+      
+      mutate(
+        across(
+          all_of(currency_cols),
+          ~ dollar(
+            .x,
+            prefix = "$",
+            big.mark = ",",
+            accuracy = 1
+          )
+        )
+      )
+  }
+  
+  # ==========================================================
+  # ROUND REMAINING NUMBERS
+  # ==========================================================
+  
+  num_cols <- names(df_export)[
+    sapply(df_export, is.numeric)
+  ]
+  
+  df_export <- df_export |>
+    
+    mutate(
+      across(
+        all_of(num_cols),
+        ~ round(.x, digits)
+      )
     )
   
-  gtsave(
-    gt_tbl,
-    here(paths$figures, paste0(file_name, ".png"))
+  # ==========================================================
+  # CLEAN LABELS
+  # ==========================================================
+  
+  names(df_export) <- names(df_export) |>
+    
+    str_replace_all("_Pct", " %") |>
+    
+    str_replace_all("_AE", " AE") |>
+    
+    str_replace_all("_", " ")
+  
+  # ==========================================================
+  # BUILD FLEXTABLE
+  # ==========================================================
+  
+  ft <- flextable(df_export)
+  
+  ft <- autofit(ft)
+  
+  ft <- theme_vanilla(ft)
+  
+  ft <- fontsize(
+    ft,
+    size = 10,
+    part = "all"
   )
   
-  gtsave(
-    gt_tbl,
-    here(paths$tables, paste0(file_name, ".html"))
+  ft <- fontsize(
+    ft,
+    size = 14,
+    part = "header"
+  )
+  
+  ft <- bold(
+    ft,
+    part = "header"
+  )
+  
+  ft <- align(
+    ft,
+    align = "center",
+    part = "all"
+  )
+  
+  ft <- padding(
+    ft,
+    padding = 6,
+    part = "all"
+  )
+  
+  ft <- bg(
+    ft,
+    bg = "#F4F6F9",
+    part = "header"
+  )
+  
+  ft <- border_remove(ft)
+  
+  ft <- hline_top(
+    ft,
+    border = fp_border(
+      color = "black",
+      width = 1.5
+    )
+  )
+  
+  ft <- hline_bottom(
+    ft,
+    border = fp_border(
+      color = "black",
+      width = 1.5
+    )
+  )
+  
+  ft <- hline(
+    ft,
+    border = fp_border(
+      color = "#D9D9D9",
+      width = 0.5
+    ),
+    part = "body"
+  )
+  
+  # ==========================================================
+  # TITLE / SUBTITLE
+  # ==========================================================
+  
+  if (!is.null(title)) {
+    
+    ft <- add_header_lines(
+      ft,
+      values = title
+    )
+    
+    ft <- bold(
+      ft,
+      i = 1,
+      part = "header"
+    )
+    
+    ft <- fontsize(
+      ft,
+      size = 16,
+      i = 1,
+      part = "header"
+    )
+  }
+  
+  if (!is.null(subtitle)) {
+    
+    ft <- add_header_lines(
+      ft,
+      values = subtitle
+    )
+    
+    ft <- fontsize(
+      ft,
+      size = 10,
+      i = 1,
+      part = "header"
+    )
+  }
+  
+  # ==========================================================
+  # SAVE PNG
+  # ==========================================================
+  
+  save_as_image(
+    ft,
+    path = here(
+      paths$figures,
+      paste0(file_name, ".png")
+    )
+  )
+  
+  # ==========================================================
+  # SAVE DOCX VERSION
+  # ==========================================================
+  
+  save_as_docx(
+    "Table" = ft,
+    path = here(
+      paths$tables,
+      paste0(file_name, ".docx")
+    )
   )
 }
 
@@ -125,6 +323,36 @@ X_test <- X_test[, names(X_train), drop = FALSE]
 y_train <- train_sf$price
 
 # ============================================================
+# GLOBAL PLOT THEME
+# ============================================================
+
+theme_set(
+  
+  theme_minimal(base_size = 13) +
+    
+    theme(
+      
+      plot.title = element_text(
+        face = "bold",
+        size = 16
+      ),
+      
+      plot.subtitle = element_text(
+        size = 11,
+        color = "gray40"
+      ),
+      
+      axis.title = element_text(
+        face = "bold"
+      ),
+      
+      panel.grid.minor = element_blank(),
+      
+      legend.position = "bottom"
+    )
+)
+
+# ============================================================
 # BEST MODEL
 # ============================================================
 
@@ -152,20 +380,14 @@ calc_metrics <- function(y_true, y_pred) {
   
   err <- y_pred - y_true
   ae  <- abs(err)
-  ape <- ae / y_true
   
   tibble(
     MAE                 = mean(ae, na.rm = TRUE),
     Median_AE           = median(ae, na.rm = TRUE),
-    RMSE                = sqrt(mean(err^2, na.rm = TRUE)),
-    MAPE                = mean(ape, na.rm = TRUE),
-    Median_APE          = median(ape, na.rm = TRUE),
-    P90_APE             = quantile(ape, 0.90, na.rm = TRUE),
     Bias                = mean(err, na.rm = TRUE),
     Overprediction_Pct  = mean(err > 0, na.rm = TRUE),
     Underprediction_Pct = mean(err < 0, na.rm = TRUE),
-    P90_AE              = quantile(ae, 0.90, na.rm = TRUE),
-    P95_AE              = quantile(ae, 0.95, na.rm = TRUE)
+    P90_AE              = quantile(ae, 0.90, na.rm = TRUE)
   )
 }
 
@@ -279,40 +501,108 @@ cv_norte <- cv_xgb(
 toc()
 
 # ============================================================
-# MAIN CV TABLE
+# PERFORMANCE Y RISK CV TABLE
 # ============================================================
 
-tabla_cv <- bind_rows(
+tabla_cv_perf <- bind_rows(
   
   cv_std$metrics |>
     mutate(CV = "Random CV"),
   
   cv_global$metrics |>
-    mutate(CV = "Random CV (stratified locality)"),
+    mutate(CV = "Random Stratified"),
   
   cv_spatial$metrics |>
-    mutate(CV = "Spatial CV (leave-locality-out)"),
+    mutate(CV = "Spatial Locality"),
   
   cv_upz$metrics |>
-    mutate(CV = "Spatial CV (leave-UPZ-out)"),
+    mutate(CV = "Spatial UPZ"),
   
   cv_norte$metrics |>
-    mutate(CV = "Northeast Cluster Holdout")
+    mutate(CV = "NE Holdout")
   
 ) |>
   
-  select(CV, everything())
-
-print(tabla_cv)
+  select(
+    CV,
+    MAE,
+    Median_AE,
+    P90_AE
+  )
 
 write_csv(
-  tabla_cv,
-  here(paths$tables, "tabla_cv_completa.csv")
+  tabla_cv_perf,
+  here(paths$tables, "tabla_cv_performance.csv")
 )
 
 save_gt_table(
-  tabla_cv,
-  "tabla_cv_completa"
+  
+  tabla_cv_perf,
+  
+  "tabla_cv_performance",
+  
+  title = "Cross-Validation Performance",
+  
+  subtitle = "Core absolute error metrics",
+  
+  currency_cols = c(
+    "MAE",
+    "Median_AE",
+    "P90_AE"
+  ),
+  
+  digits = 0
+)
+
+tabla_cv_risk <- bind_rows(
+  
+  cv_std$metrics |>
+    mutate(CV = "Random CV"),
+  
+  cv_global$metrics |>
+    mutate(CV = "Random Stratified"),
+  
+  cv_spatial$metrics |>
+    mutate(CV = "Spatial Locality"),
+  
+  cv_upz$metrics |>
+    mutate(CV = "Spatial UPZ"),
+  
+  cv_norte$metrics |>
+    mutate(CV = "NE Holdout")
+  
+) |>
+  
+  select(
+    CV,
+    Bias,
+    Overprediction_Pct,
+    Underprediction_Pct
+  )
+
+write_csv(
+  tabla_cv_risk,
+  here(paths$tables, "tabla_cv_risk.csv")
+)
+
+save_gt_table(
+  
+  tabla_cv_risk,
+  
+  "tabla_cv_risk",
+  
+  title = "Prediction Risk Profile",
+  
+  subtitle = "Directional prediction behavior",
+  
+  pct_cols = c(
+    "Overprediction_Pct",
+    "Underprediction_Pct"
+  ),
+  
+  currency_cols = "Bias",
+  
+  digits = 1
 )
 
 # ============================================================
@@ -360,10 +650,21 @@ save_gt_table(
 # RANDOM VS SPATIAL GAP
 # ============================================================
 
-mae_std     <- tabla_cv$MAE[tabla_cv$CV == "Random CV"]
-mae_spatial <- tabla_cv$MAE[tabla_cv$CV == "Spatial CV (leave-locality-out)"]
-mae_upz     <- tabla_cv$MAE[tabla_cv$CV == "Spatial CV (leave-UPZ-out)"]
-mae_norte   <- tabla_cv$MAE[tabla_cv$CV == "Northeast Cluster Holdout"]
+mae_std <- tabla_cv_perf$MAE[
+  tabla_cv_perf$CV == "Random CV"
+]
+
+mae_spatial <- tabla_cv_perf$MAE[
+  tabla_cv_perf$CV == "Spatial Locality"
+]
+
+mae_upz <- tabla_cv_perf$MAE[
+  tabla_cv_perf$CV == "Spatial UPZ"
+]
+
+mae_norte <- tabla_cv_perf$MAE[
+  tabla_cv_perf$CV == "NE Holdout"
+]
 
 gap_spatial <- 100 * (mae_spatial / mae_std - 1)
 gap_upz     <- 100 * (mae_upz / mae_std - 1)
@@ -397,7 +698,17 @@ write_csv(
 
 save_gt_table(
   tabla_gap,
-  "tabla_gap_spatial"
+  "tabla_gap_spatial",
+  
+  title = "Spatial Validation Penalty",
+  
+  subtitle = "Performance deterioration relative to random CV",
+  
+  pct_cols = "Gap_vs_Random_Pct",
+  
+  currency_cols = "MAE",
+  
+  digits = 1
 )
 
 p_gap <- tabla_gap |>
@@ -420,7 +731,8 @@ ggsave(
   here(paths$figures, "spatial_gap.png"),
   p_gap,
   width = 8,
-  height = 5
+  height = 5,
+  dpi = 400
 )
 
 # ============================================================
@@ -518,7 +830,8 @@ ggsave(
   here(paths$figures, "xgb_gain_importance.png"),
   p_imp,
   width = 10,
-  height = 8
+  height = 8,
+  dpi = 400
 )
 
 p_group_imp <- group_importance |>
@@ -544,7 +857,8 @@ ggsave(
   here(paths$figures, "feature_group_importance.png"),
   p_group_imp,
   width = 8,
-  height = 5
+  height = 5,
+  dpi = 400
 )
 
 # ============================================================
@@ -600,8 +914,18 @@ write_csv(
 )
 
 save_gt_table(
-  shap_long |> slice_head(n = 25),
-  "shap_summary_top25"
+  
+  shap_long |>
+    
+    slice_head(n = 25),
+  
+  "shap_summary_top25",
+  
+  title = "Top 25 SHAP Features",
+  
+  subtitle = "Average absolute SHAP contribution",
+  
+  digits = 4
 )
 
 p_shap <- shap_long |>
@@ -627,7 +951,8 @@ ggsave(
   here(paths$figures, "shap_importance.png"),
   p_shap,
   width = 10,
-  height = 8
+  height = 8,
+  dpi = 400
 )
 
 # ============================================================
@@ -741,8 +1066,23 @@ write_csv(
 )
 
 save_gt_table(
+  
   bias_estrato,
-  "bias_by_estrato"
+  
+  "bias_by_estrato",
+  
+  title = "Prediction Bias by Socioeconomic Strata",
+  
+  subtitle = "Model error decomposition across estratos",
+  
+  pct_cols = "MAPE",
+  
+  currency_cols = c(
+    "MAE",
+    "Bias"
+  ),
+  
+  digits = 2
 )
 
 # ============================================================
@@ -766,9 +1106,30 @@ write_csv(
   here(paths$tables, "bias_by_localidad.csv")
 )
 
+bias_localidad_top <- bias_localidad |>
+  
+  arrange(desc(MAE)) |>
+  
+  slice_head(n = 15)
+
 save_gt_table(
-  bias_localidad,
-  "bias_by_localidad"
+  
+  bias_localidad_top,
+  
+  "bias_by_localidad_top15",
+  
+  title = "Highest Error Localities",
+  
+  subtitle = "Top 15 localities ranked by MAE",
+  
+  pct_cols = "MAPE",
+  
+  currency_cols = c(
+    "MAE",
+    "Bias"
+  ),
+  
+  digits = 2
 )
 
 # ============================================================
@@ -828,8 +1189,18 @@ if ("localidad" %in% names(top_errors)) {
   )
   
   save_gt_table(
+    
     catastrophic_summary,
-    "catastrophic_error_summary"
+    
+    "catastrophic_error_summary",
+    
+    title = "Catastrophic Error Concentration",
+    
+    subtitle = "Localities with highest concentration of severe prediction errors",
+    
+    currency_cols = "Mean_abs_error",
+    
+    digits = 0
   )
 }
 
@@ -905,7 +1276,15 @@ write_csv(
 
 save_gt_table(
   benchmark_tbl,
-  "benchmark_models"
+  "benchmark_models",
+  
+  title = "Benchmark Model Comparison",
+  
+  subtitle = "Naive locality averages versus XGBoost",
+  
+  currency_cols = "MAE",
+  
+  digits = 0
 )
 
 # ============================================================
@@ -930,7 +1309,8 @@ ggsave(
   here(paths$figures, "calibration_plot.png"),
   p_calib,
   width = 8,
-  height = 8
+  height = 8,
+  dpi = 400
 )
 
 # ============================================================
@@ -961,7 +1341,8 @@ ggsave(
   here(paths$figures, "error_vs_price.png"),
   p_price_error,
   width = 12,
-  height = 8
+  height = 8,
+  dpi = 400
 )
 
 # ============================================================
@@ -1247,7 +1628,8 @@ if ("dist_centro" %in% names(train_sf)) {
     here(paths$figures, "error_vs_distance.png"),
     p_dist,
     width = 8,
-    height = 6
+    height = 6,
+    dpi = 400
   )
 }
 
@@ -1261,8 +1643,12 @@ saveRDS(
 )
 
 saveRDS(
-  tabla_cv,
-  here(paths$training, "tabla_cv_analysis.rds")
+  list(
+    performance = tabla_cv_perf,
+    risk = tabla_cv_risk,
+    folds = tabla_folds
+  ),
+  here(paths$training, "cv_analysis_tables.rds")
 )
 
 saveRDS(
