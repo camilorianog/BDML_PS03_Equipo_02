@@ -510,13 +510,13 @@ tabla_cv_perf <- bind_rows(
     mutate(CV = "Random CV"),
   
   cv_global$metrics |>
-    mutate(CV = "Random Stratified"),
+    mutate(CV = "Random (proporción Localidad)"),
   
   cv_spatial$metrics |>
-    mutate(CV = "Spatial Locality"),
+    mutate(CV = "Localidad"),
   
   cv_upz$metrics |>
-    mutate(CV = "Spatial UPZ"),
+    mutate(CV = "UPZ"),
   
   cv_norte$metrics |>
     mutate(CV = "NE Holdout")
@@ -543,7 +543,7 @@ save_gt_table(
   
   title = "Cross-Validation Performance",
   
-  subtitle = "Core absolute error metrics",
+  subtitle = "Absolute Error metrics",
   
   currency_cols = c(
     "MAE",
@@ -591,13 +591,11 @@ save_gt_table(
   
   "tabla_cv_risk",
   
-  title = "Prediction Risk Profile",
-  
-  subtitle = "Directional prediction behavior",
+  title = "Perfil de riesgo de predicción",
   
   pct_cols = c(
-    "Overprediction_Pct",
-    "Underprediction_Pct"
+    "Sobpredicción",
+    "subpredicción"
   ),
   
   currency_cols = "Bias",
@@ -613,10 +611,10 @@ tabla_folds <- tibble(
   
   CV = c(
     rep("Random CV", length(cv_std$fold_mae)),
-    rep("Random CV (stratified locality)", length(cv_global$fold_mae)),
+    rep("Random CV (proporción de localidad)", length(cv_global$fold_mae)),
     rep("Spatial CV (leave-locality-out)", length(cv_spatial$fold_mae)),
     rep("Spatial CV (leave-UPZ-out)", length(cv_upz$fold_mae)),
-    rep("Northeast Cluster Holdout", length(cv_norte$fold_mae))
+    rep("Cluster NorEste Holdout", length(cv_norte$fold_mae))
   ),
   
   Fold = c(
@@ -655,11 +653,11 @@ mae_std <- tabla_cv_perf$MAE[
 ]
 
 mae_spatial <- tabla_cv_perf$MAE[
-  tabla_cv_perf$CV == "Spatial Locality"
+  tabla_cv_perf$CV == "Localidad"
 ]
 
 mae_upz <- tabla_cv_perf$MAE[
-  tabla_cv_perf$CV == "Spatial UPZ"
+  tabla_cv_perf$CV == "UPZ"
 ]
 
 mae_norte <- tabla_cv_perf$MAE[
@@ -700,9 +698,9 @@ save_gt_table(
   tabla_gap,
   "tabla_gap_spatial",
   
-  title = "Spatial Validation Penalty",
+  title = "Penalidad por CV Espacial",
   
-  subtitle = "Performance deterioration relative to random CV",
+  subtitle = "Empeortamiento de performance relativo a random CV",
   
   pct_cols = "Gap_vs_Random_Pct",
   
@@ -721,10 +719,10 @@ p_gap <- tabla_gap |>
   geom_col() +
   
   labs(
-    title = "Spatial Validation Penalty",
-    subtitle = "Increase in MAE relative to random CV",
+    title = "Penalidad por CV Espacial",
+    subtitle = "Aumento MAE relativo a random CV",
     x = "",
-    y = "% increase in MAE"
+    y = "% aumento MAE"
   )
 
 ggsave(
@@ -848,9 +846,9 @@ p_group_imp <- group_importance |>
   scale_y_continuous(labels = scales::percent) +
   
   labs(
-    title = "Predictive Power by Feature Group",
+    title = "Poder Predictivo por Feature Group",
     x = "",
-    y = "Share of total XGBoost gain"
+    y = "Proporción de XGBoost gain"
   )
 
 ggsave(
@@ -921,9 +919,9 @@ save_gt_table(
   
   "shap_summary_top25",
   
-  title = "Top 25 SHAP Features",
+  title = "Top 25 Features SHAP",
   
-  subtitle = "Average absolute SHAP contribution",
+  subtitle = "Promedio absoluto de contribución SHAP",
   
   digits = 4
 )
@@ -942,7 +940,7 @@ p_shap <- shap_long |>
   coord_flip() +
   
   labs(
-    title = "Top SHAP Features",
+    title = "Top Features SHAP",
     x = "",
     y = "Mean |SHAP|"
   )
@@ -1010,19 +1008,19 @@ bias_tbl <- bind_rows(
   ),
   
   tibble(
-    CV = "Spatial locality",
+    CV = "Localidad",
     y = y_train,
     pred = cv_spatial$pred
   ),
   
   tibble(
-    CV = "Spatial UPZ",
+    CV = "UPZ",
     y = y_train,
     pred = cv_upz$pred
   ),
   
   tibble(
-    CV = "Northeast Holdout",
+    CV = "NorEste Holdout",
     y = y_train,
     pred = cv_norte$pred
   )
@@ -1049,21 +1047,14 @@ bias_tbl <- bind_rows(
 # ============================================================
 
 bias_estrato <- bias_tbl |>
-  
+  filter(estrato != 0) |>
   group_by(CV, estrato) |>
-  
   summarise(
     MAE = mean(abs_error, na.rm = TRUE),
-    MAPE = mean(pct_error, na.rm = TRUE),
     Bias = mean(error, na.rm = TRUE),
-    N = n(),
     .groups = "drop"
-  )
-
-write_csv(
-  bias_estrato,
-  here(paths$tables, "bias_by_estrato.csv")
-)
+  ) |>
+  arrange(CV, desc(MAE))
 
 save_gt_table(
   
@@ -1071,9 +1062,9 @@ save_gt_table(
   
   "bias_by_estrato",
   
-  title = "Prediction Bias by Socioeconomic Strata",
+  title = "Sesgo de predicción por estrato",
   
-  subtitle = "Model error decomposition across estratos",
+  subtitle = "",
   
   pct_cols = "MAPE",
   
@@ -1090,16 +1081,13 @@ save_gt_table(
 # ============================================================
 
 bias_localidad <- bias_tbl |>
-  
   group_by(CV, localidad) |>
-  
   summarise(
     MAE = mean(abs_error, na.rm = TRUE),
-    MAPE = mean(pct_error, na.rm = TRUE),
     Bias = mean(error, na.rm = TRUE),
-    N = n(),
     .groups = "drop"
-  )
+  ) |>
+  arrange(CV, desc(MAE))
 
 write_csv(
   bias_localidad,
@@ -1107,10 +1095,10 @@ write_csv(
 )
 
 bias_localidad_top <- bias_localidad |>
-  
-  arrange(desc(MAE)) |>
-  
-  slice_head(n = 15)
+  group_by(CV) |>
+  arrange(desc(MAE), .by_group = TRUE) |>
+  slice_head(n = 4) |>
+  ungroup()
 
 save_gt_table(
   
@@ -1118,11 +1106,9 @@ save_gt_table(
   
   "bias_by_localidad_top15",
   
-  title = "Highest Error Localities",
+  title = "Localidades con mayor MAE",
   
-  subtitle = "Top 15 localities ranked by MAE",
-  
-  pct_cols = "MAPE",
+  subtitle = "Top 4 localidades por MAE",
   
   currency_cols = c(
     "MAE",
@@ -1194,9 +1180,9 @@ if ("localidad" %in% names(top_errors)) {
     
     "catastrophic_error_summary",
     
-    title = "Catastrophic Error Concentration",
+    title = "Concentración de Error Catastrófico",
     
-    subtitle = "Localities with highest concentration of severe prediction errors",
+    subtitle = "Localidades con mayor concentración de errores catastróficos",
     
     currency_cols = "Mean_abs_error",
     
@@ -1300,9 +1286,9 @@ p_calib <- ggplot(calib_df, aes(actual, pred)) +
   geom_point(alpha = 0.2) +
   geom_abline(slope = 1, intercept = 0) +
   labs(
-    title = "Calibration Plot",
-    x = "Actual price",
-    y = "Predicted price"
+    title = "Plot Calibración",
+    x = "Precio Real",
+    y = "Precio Predicho"
   )
 
 ggsave(
@@ -1332,8 +1318,8 @@ p_price_error <- bias_tbl |>
   facet_wrap(~CV) +
   
   labs(
-    title = "Absolute Error vs Price",
-    x = "Price",
+    title = "Absolute Error vs Precio",
+    x = "Precio",
     y = "Absolute Error"
   )
 
@@ -1461,8 +1447,8 @@ p_map_spatial <- ggplot() +
   ) +
   
   labs(
-    title = "Spatial CV Errors",
-    subtitle = "Leave-locality-out validation",
+    title = "Localidad CV Errors",
+    subtitle = "Validación Leave-locality-out",
     color = "Absolute error"
   ) +
   
@@ -1504,8 +1490,8 @@ p_map_upz <- ggplot() +
   ) +
   
   labs(
-    title = "UPZ Spatial CV Errors",
-    subtitle = "Leave-UPZ-out validation",
+    title = "UPZ CV Errors",
+    subtitle = "Validación Leave-UPZ-out",
     color = "Absolute error"
   ) +
   
@@ -1547,8 +1533,8 @@ p_map_norte <- ggplot() +
   ) +
   
   labs(
-    title = "Northeast Cluster Holdout Errors",
-    subtitle = "Most realistic Kaggle proxy",
+    title = "Cluster NorEste Holdout Errors",
+    subtitle = "Mejor proxy de Kaggle",
     color = "Absolute error"
   ) +
   
@@ -1619,8 +1605,8 @@ if ("dist_centro" %in% names(train_sf)) {
     geom_point(alpha = 0.1) +
     geom_smooth(se = FALSE) +
     labs(
-      title = "Error vs Distance",
-      x = "Distance",
+      title = "Error vs Distancia",
+      x = "Distancia",
       y = "Absolute Error"
     )
   
@@ -1647,6 +1633,12 @@ saveRDS(
     performance = tabla_cv_perf,
     risk = tabla_cv_risk,
     folds = tabla_folds
+message("  • SHAP analysis")
+message("  • Bias analysis")
+message("  • Catastrophic errors")
+message("  • Benchmark comparison")
+message("  • Spatial error maps")
+message("======================================================")
   ),
   here(paths$training, "cv_analysis_tables.rds")
 )
@@ -1669,9 +1661,3 @@ message("  • CV comparison tables")
 message("  • Fold-level MAE")
 message("  • Spatial validation gap")
 message("  • XGBoost gain importance")
-message("  • SHAP analysis")
-message("  • Bias analysis")
-message("  • Catastrophic errors")
-message("  • Benchmark comparison")
-message("  • Spatial error maps")
-message("======================================================")
