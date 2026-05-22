@@ -91,7 +91,7 @@ source(here(paths$process, "01_text_variables.R"))
 toc(log = TRUE)
 
 tic("Variables espaciales")
-source(here(paths$process, "02_spatial_variables.R")) #WIP
+source(here(paths$process, "02_spatial_variables.R"))
 toc(log = TRUE)
 
 tic("Imputación")

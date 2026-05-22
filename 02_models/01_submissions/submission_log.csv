@@ -4,3 +4,4 @@ timestamp,nombre,tipo,cv_mae,autor
 2026-05-18 05:30:13,LR_base,LR,0,jcrg
 2026-05-18 05:30:59,LR_base,LR,0,jcrg
 2026-05-18 05:32:43,LR_base,LR,0.2875,jcrg
+2026-05-21 19:09:30,BRU_hidden32-16_penalty001_lr001_epochs100_actrelu_drop0_cvspatial,BRU,434582870.8947,jcrg

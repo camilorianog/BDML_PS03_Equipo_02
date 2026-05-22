@@ -99,13 +99,14 @@ message(
 
 # --- Recipe ------------------------------------------------------------------
 
-recipe_nn <- recipe(log_price ~ ., data = train) |>
+recipe_nn <- recipe(price ~ ., data = train) |>
   step_rm(
-    property_id, description, title, price,
+    property_id, description, title,
     any_of(c("geometry", "shape"))
   ) |>
   step_mutate(property_type = as.factor(property_type)) |>
   step_impute_median(all_numeric_predictors()) |>
+  step_novel(all_nominal_predictors()) |>
   step_dummy(all_nominal_predictors()) |>
   step_zv(all_predictors()) |>
   step_normalize(all_numeric_predictors())
@@ -127,6 +128,11 @@ wf_nn <- workflow() |>
   add_recipe(recipe_nn) |>
   add_model(spec_nn)
 
+# --- Prevenir bloqueo de pantalla --------------------------------------------
+
+NoSleepR::nosleep_on()
+on.exit(NoSleepR::nosleep_off(), add = TRUE)
+
 # --- Validación cruzada -------------------------------------------------------
 
 set.seed(SEED)
@@ -142,7 +148,17 @@ collect_metrics(cv_results_nn)
 # --- Modelo final + log + submission -----------------------------------------
 
 modelo_nn <- wf_nn |> fit(train)
-nombre_nn <- "BRU_base"
+
+# Nombre generado automáticamente desde los hiperparámetros actuales
+nombre_nn <- nm("BRU", tibble(
+  hidden   = paste(NN_HIDDEN, collapse = "-"),
+  penalty  = NN_PENALTY,
+  lr       = NN_LEARN_RATE,
+  epochs   = NN_EPOCHS,
+  act      = NN_ACTIVATION,
+  drop     = NN_DROPOUT,
+  cv       = gsub("folds_", "", CV_SET)
+))
 
 log_modelo(cv_results_nn, nombre_nn)
 generar_submission(modelo_nn, nombre_nn)

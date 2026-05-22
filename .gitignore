@@ -2,10 +2,9 @@
 .Rhistory
 .RData
 .Ruserdata
-00_data/01_processed/
-!00_data/01_processed/*.rds
-!00_data/01_processed/*.RDS
-02_models/00_classes/
+00_data/01_processed/folds_*.rds
+00_data/01_processed/folds_*.RDS
+02_models/00_classes/*
 00_data/00_raw/*.shp
 00_data/00_raw/*.dbf
 00_data/00_raw/*.sbn
