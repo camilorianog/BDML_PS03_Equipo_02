@@ -23,37 +23,47 @@ bbox_bogota <- c(
 osm_cache <- here(paths$raw, "osm_cache")
 dir.create(osm_cache, recursive = TRUE, showWarnings = FALSE)
 
-#' Helper: llama osmdata_sf rotando servidores Overpass en caso de 429
-osm_fetch_with_retry <- function(q, max_tries = 6, wait_sec = 10) {
-
+#' Helper: llama osmdata_sf rotando servidores Overpass en caso de 429/403
+osm_fetch_with_retry <- function(q, max_tries = 8, wait_sec = 15) {
+  
+  # Se elimina maps.mail.ru porque suele devolver 403 en redes institucionales
   overpass_servers <- c(
+    "https://overpass-api.de/api/interpreter",
     "https://overpass.kumi.systems/api/interpreter",
-    "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
-    "https://overpass.openstreetmap.ru/api/interpreter",
-    "https://overpass-api.de/api/interpreter"
+    "https://overpass.openstreetmap.ru/api/interpreter"
   )
-
+  
   for (i in seq_len(max_tries)) {
-
+    
     server <- overpass_servers[((i - 1) %% length(overpass_servers)) + 1]
     osmdata::set_overpass_url(server)
-
+    
+    # Espera exponencial: 15s, 15s, 30s, 30s, 45s, 45s, ...
+    wait_actual <- wait_sec * ceiling(i / 2)
+    
     result <- tryCatch(
       osmdata_sf(q),
       error = function(e) {
         msg <- conditionMessage(e)
-        if (grepl("429|Too Many|rate.limit|backoff", msg, ignore.case = TRUE)) {
-          message("  429 en ", server, " — cambiando servidor, espero ", wait_sec, "s (intento ", i, "/", max_tries, ")")
-          Sys.sleep(wait_sec)
+        # Captura 429 (rate limit) Y 403 (forbidden / bloqueado)
+        if (grepl("429|403|Too Many|Forbidden|rate.limit|backoff",
+                  msg, ignore.case = TRUE)) {
+          message(
+            "  [", sub(".*HTTP (\\d+).*", "HTTP \\1", msg), "]",
+            " en ", server,
+            " — cambiando servidor, espero ", wait_actual, "s",
+            " (intento ", i, "/", max_tries, ")"
+          )
+          Sys.sleep(wait_actual)
           NULL
         } else {
-          stop(e)
+          stop(e)   # otros errores sí se propagan
         }
       }
     )
     if (!is.null(result)) return(result)
   }
-  stop("Todos los servidores Overpass devolvieron 429. Intentos agotados.")
+  stop("Todos los servidores Overpass fallaron tras ", max_tries, " intentos.")
 }
 
 #' Descarga puntos OSM para key = value en bbox de Bogotá
@@ -76,7 +86,7 @@ get_osm_points <- function(key, value, bbox = bbox_bogota) {
     add_osm_feature(key = key, value = value)
   
   raw <- osm_fetch_with_retry(q)
-
+  
   pts <- raw$osm_points
   if (is.null(pts) || nrow(pts) == 0) {
     # fallback: centroides de polígonos (e.g. cafés mapeados como edificio)
@@ -98,42 +108,42 @@ get_osm_points <- function(key, value, bbox = bbox_bogota) {
 
 #' Descarga polígonos OSM para key = value en bbox de Bogotá
 get_osm_polygons <- function(key, value, bbox = bbox_bogota) {
-
+  
   cache_file <- here(
     osm_cache,
     paste0(key, "_", value, "_poly.rds")
   )
-
+  
   if (file.exists(cache_file)) {
     message("  Loading cache: ", key, " = ", value, " (polygons)")
     return(readRDS(cache_file))
   }
-
+  
   message("  OSM polygons: ", key, " = ", value)
-
+  
   q <- opq(bbox = bbox) |>
     add_osm_feature(key = key, value = value)
-
+  
   raw <- osm_fetch_with_retry(q)
-
+  
   # Combinar polygons y multipolygons (en OSM los parques suelen ser relaciones)
   polys  <- raw$osm_polygons
   mpolys <- raw$osm_multipolygons
-
+  
   combined <- dplyr::bind_rows(
     if (!is.null(polys)  && nrow(polys)  > 0) dplyr::select(polys,  osm_id) else NULL,
     if (!is.null(mpolys) && nrow(mpolys) > 0) dplyr::select(mpolys, osm_id) else NULL
   )
-
+  
   if (is.null(combined) || nrow(combined) == 0) {
     warning("  Sin polígonos encontrados para: ", key, " = ", value)
     return(sf::st_sf(osm_id = character(0), geometry = sf::st_sfc(crs = 4326)))
   }
-
+  
   obj <- combined |> st_make_valid()
-
+  
   saveRDS(obj, cache_file)
-
+  
   obj
 }
 
@@ -148,7 +158,7 @@ dist_min <- function(base_sf, target_sf) {
   if (nrow(target_sf) == 0L) {
     return(rep(NA_real_, nrow(base_sf)))
   }
-
+  
   idx <- st_nearest_feature(base_sf, target_sf)
   
   nearest <- target_sf[idx, ]
@@ -325,4 +335,4 @@ saveRDS(test,  here(paths$processed, "test_spatial.rds"))
 message("02_spatial_variables.R   |  train: ",
         nrow(train), " obs  |  test: ", nrow(test), " obs")
 
-nosleep_off(h)
+nosleep_off()
