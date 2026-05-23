@@ -13,3 +13,5 @@
 00_data/00_raw/*.cpg
 00_data/00_raw/*.prj
 00_data/01_process/02a_spatial_variables_assets/*
+00_data/02_cv/folds_spatial.rds
+00_data/02_cv/folds_spatial_upz.rds
