@@ -7,7 +7,12 @@ train_sf <- st_as_sf(train, coords = c("lon", "lat"), crs = 4326, remove = FALSE
   st_transform(crs = 3116)
 
 set.seed(SEED)
-cv_folds <- spatial_block_cv(train_sf, v = CV_FOLDS, cellsize = 2000)
+
+cv_folds <- spatial_block_cv(
+  train_sf,
+  v = CV_FOLDS,
+  cellsize = 2000
+)
 
 # 2. RECIPE --------------------------------------------------
 recipe_cart <- recipe(log_price ~ ., data = train) |>
@@ -49,13 +54,60 @@ collect_metrics(cv_results_cart) |>
   arrange(mean) |>
   head(10)
 
-# 6. MODELO FINAL + LOG + SUBMISSION -------------------------
-best_cart <- select_best(cv_results_cart, metric = "mae")
+# 6. MODELO FINAL --------------------------------------------
+best_cart <- select_best(
+  cv_results_cart,
+  metric = "mae"
+)
 
 modelo_cart <- wf_cart |>
   finalize_workflow(best_cart) |>
-  fit(train)
+  fit(data = train)
 
+# 7. LOG DEL MODELO ------------------------------------------
 nombre_cart <- "CART_tuned"
-log_modelo(cv_results_cart, nombre_cart)
-generar_submission(modelo_cart, nombre_cart)
+
+log_modelo(
+  cv_results_cart,
+  nombre_cart
+)
+
+# 8. PREDICCIÓN SOBRE TEST -----------------------------------
+
+pred_cart_log <- predict(
+  modelo_cart,
+  new_data = test
+) |>
+  pull(.pred)
+
+pred_cart_price <- exp(pred_cart_log) - 1
+
+# Evitar valores negativos o absurdos
+pred_cart_price <- pmax(pred_cart_price, 0)
+
+# 9. CREAR SUBMISSION ----------------------------------------
+
+submission_cart <- tibble(
+  property_id = test$property_id,
+  price = pred_cart_price
+)
+
+# 10. GUARDAR CSV EN CARPETA CART ----------------------------
+
+dir.create(
+  here::here("02_models", "01_submissions", "02_regression_trees"),
+  recursive = TRUE,
+  showWarnings = FALSE
+)
+
+write_csv(
+  submission_cart,
+  here::here(
+    "02_models",
+    "01_submissions",
+    "02_regression_trees",
+    "CART_cart.csv"
+  )
+)
+
+message("Submission CART guardada en: 02_models/01_submissions/02_regression_trees/CART_cart.csv")
