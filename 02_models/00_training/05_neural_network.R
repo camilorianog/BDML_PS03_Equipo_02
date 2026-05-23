@@ -29,7 +29,7 @@ NN_LEARN_RATE <- 0.001
 NN_EPOCHS     <- 300
 NN_ACTIVATION <- "relu"
 NN_DROPOUT    <- 0
-CV_SET        <- "folds_std"
+CV_SET        <- "folds_spatial"
 
 # --- Datos -------------------------------------------------------------------
 
@@ -99,9 +99,10 @@ message(
 
 # --- Recipe ------------------------------------------------------------------
 
-recipe_nn <- recipe(log_price ~ ., data = train) |>
+recipe_nn <- recipe(price ~ ., data = train) |>
+  step_log(price, base = exp(1)) |>
   step_rm(
-    property_id, description, title, price,
+    property_id, description, title,
     any_of(c("geometry", "shape"))
   ) |>
   step_mutate(property_type = as.factor(property_type)) |>
@@ -161,7 +162,7 @@ nombre_nn <- nm("BRU", tibble(
 ))
 
 log_modelo(cv_results_nn, nombre_nn)
-generar_submission(modelo_nn, nombre_nn)
+generar_submission(modelo_nn, nombre_nn, log_scale = TRUE)
 
 # ============================================================
 # OPCIONAL: tune_grid

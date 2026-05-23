@@ -2,7 +2,7 @@
 # Función para ahcer prediccion y generar submission
 # 02_generar_submission.R
 
-generar_submission <- function(modelo_final, nombre) {
+generar_submission <- function(modelo_final, nombre, log_scale = TRUE) {
   tipo <- strsplit(nombre, "_")[[1]][1]
   
   subfolder_map <- list(
@@ -22,7 +22,7 @@ generar_submission <- function(modelo_final, nombre) {
   
   submission <- predict(modelo_final, test) %>%
     bind_cols(test %>% select(property_id)) %>%
-    mutate(.pred = exp(.pred)) %>%
+    mutate(.pred = if (log_scale) exp(.pred) else .pred) %>%
     select(property_id, price = .pred)
   
   write_csv(submission, here(subfolder, paste0(nombre, ".csv")))
