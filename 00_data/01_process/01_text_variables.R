@@ -157,3 +157,9 @@ text_variables <- function(db) {
 
 train <- text_variables(train)
 test  <- text_variables(test)
+
+# --- Limpieza de objetos intermedios ----------------------------------------
+
+rm(descripcion_tokenizada, lista_palabras, lista_palabras1, lista_palabras2,
+   frecuencia, text_variables)
+gc()

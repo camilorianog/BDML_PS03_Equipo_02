@@ -81,12 +81,12 @@ as_modeling_df <- function(x) {
 if (exists("train", envir = .GlobalEnv)) {
   train <- as_modeling_df(get("train", envir = .GlobalEnv))
   message("03_imputation.R  |  usando train en memoria")
-} else if (file.exists(here(paths$processed, "train_spatial.rds"))) {
-  train <- readRDS(here(paths$processed, "train_spatial.rds")) |> as.data.frame()
-  message("03_imputation.R  |  cargando train_spatial.rds")
+} else if (file.exists(here(paths$processed, "train_model.rds"))) {
+  train <- readRDS(here(paths$processed, "train_model.rds")) |> as.data.frame()
+  message("03_imputation.R  |  cargando train_model.rds desde processed")
 } else {
   stop(
-    "No hay 'train' en memoria ni train_spatial.rds. Ejecuta 02_spatial_variables.R primero.",
+    "No hay 'train' en memoria ni train_model.rds en processed. Ejecuta el pipeline desde 00_clean.R.",
     call. = FALSE
   )
 }
@@ -94,12 +94,12 @@ if (exists("train", envir = .GlobalEnv)) {
 if (exists("test", envir = .GlobalEnv)) {
   test <- as_modeling_df(get("test", envir = .GlobalEnv))
   message("03_imputation.R  |  usando test en memoria")
-} else if (file.exists(here(paths$processed, "test_spatial.rds"))) {
-  test <- readRDS(here(paths$processed, "test_spatial.rds")) |> as.data.frame()
-  message("03_imputation.R  |  cargando test_spatial.rds")
+} else if (file.exists(here(paths$processed, "test_model.rds"))) {
+  test <- readRDS(here(paths$processed, "test_model.rds")) |> as.data.frame()
+  message("03_imputation.R  |  cargando test_model.rds desde processed")
 } else {
   stop(
-    "No hay 'test' en memoria ni test_spatial.rds. Ejecuta 02_spatial_variables.R primero.",
+    "No hay 'test' en memoria ni test_model.rds en processed. Ejecuta el pipeline desde 00_clean.R.",
     call. = FALSE
   )
 }
@@ -214,3 +214,9 @@ saveRDS(test,  here(paths$processed, "test_model.rds"))
 
 message("03_imputation.R  |  train: ",
         nrow(train), " obs  |  test: ", nrow(test), " obs")
+
+# --- Limpieza de objetos intermedios ----------------------------------------
+
+rm(get_mode, impute_numeric, impute_categorical, as_modeling_df,
+   vars_num, vars_texto, n_antes, missings_train, missings_test)
+gc()

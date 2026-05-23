@@ -91,7 +91,7 @@ get_osm_points <- function(key, value, bbox = bbox_bogota) {
   if (is.null(pts) || nrow(pts) == 0) {
     # fallback: centroides de polígonos (e.g. cafés mapeados como edificio)
     polys <- raw$osm_polygons
-    pts <- if (!is.null(polys) && nrow(polys) > 0) st_centroid(polys) else NULL
+    pts <- if (!is.null(polys) && nrow(polys) > 0) suppressWarnings(st_centroid(polys)) else NULL
   }
   if (is.null(pts) || nrow(pts) == 0) {
     warning("  Sin geometría encontrada para: ", key, " = ", value)
@@ -225,7 +225,7 @@ test$dist_universidad  <- dist_min(test,  univ_sf)
 # A7. Parques -----------------------------------------------------------------
 parques_poly <- get_osm_polygons("leisure", "park")
 parques_sf <- if (nrow(parques_poly) > 0L) {
-  st_centroid(parques_poly)
+  suppressWarnings(st_centroid(parques_poly))
 } else {
   empty_point_sf()
 }
@@ -283,8 +283,13 @@ test$is_residential  <- as.integer(lengths(st_within(test,  res_poly)) > 0)
 # BLOQUE D — CAPAS ADMINISTRATIVAS (join espacial)
 # =============================================================
 
+assets_d <- here("00_data", "01_process", "02a_spatial_variables_assets")
+
 # D1. Estratos ----------------------------------------------------------------
-estratos <- st_read(here(paths$raw, "ManzanaEstratificacion.shp"), quiet = TRUE) |>
+estratos <- st_read(
+  here(assets_d, "01_estratos", "ManzanaEstratificacion.shp"),
+  quiet = TRUE
+) |>
   st_transform(4326) |>
   st_make_valid()
 
@@ -292,7 +297,10 @@ train <- st_join(train, estratos |> dplyr::select(ESTRATO), join = st_intersects
 test  <- st_join(test,  estratos |> dplyr::select(ESTRATO), join = st_intersects)
 
 # D2. UPZ ---------------------------------------------------------------------
-upz <- st_read(here(paths$raw, "EPT_UPZ.shp"), quiet = TRUE) |>
+upz <- st_read(
+  here(assets_d, "02_UPZ", "EPT_UPZ.shp"),
+  quiet = TRUE
+) |>
   st_transform(4326) |>
   st_make_valid()
 
@@ -309,7 +317,10 @@ test <- st_join(
 )
 
 # D3. Localidades -------------------------------------------------------------
-localidades <- st_read(here(paths$raw, "Loca.shp"), quiet = TRUE) |>
+localidades <- st_read(
+  here(assets_d, "03_localidades", "Loca.shp"),
+  quiet = TRUE
+) |>
   st_transform(4326) |>
   st_make_valid()
 
@@ -329,10 +340,20 @@ test <- st_join(
 # GUARDAR
 # =============================================================
 
-saveRDS(train, here(paths$processed, "train_spatial.rds"))
-saveRDS(test,  here(paths$processed, "test_spatial.rds"))
-
 message("02_spatial_variables.R   |  train: ",
         nrow(train), " obs  |  test: ", nrow(test), " obs")
+
+# --- Limpieza de objetos intermedios ----------------------------------------
+
+rm(
+  bbox_bogota, osm_cache,
+  osm_fetch_with_retry, get_osm_points, get_osm_polygons, empty_point_sf,
+  dist_min, count_buffer,
+  cafes_sf, bus_sf, metro_sf, hospital_sf, colegio_sf, univ_sf,
+  parques_poly, parques_sf, super_sf, rest_sf, farm_sf, banco_sf, gym_sf, lamp_sf,
+  res_poly, estratos, upz, localidades,
+  assets_d, train_m, test_m
+)
+gc()
 
 nosleep_off()

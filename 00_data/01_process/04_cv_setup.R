@@ -26,7 +26,6 @@
 #                        + Teusaquillo + Barrios Unidos)
 #                        → mejor proxy del Kaggle: simula predecir
 #                          en Chapinero con apoyo de zonas similares
-#   folds_pca          — k=5 estratificado sobre train_pca_sf
 #
 # Pesos por distancia a Chapinero:
 #   Se calculan y guardan para usarse en SL y modelos finales
@@ -39,8 +38,7 @@ p_load(tidymodels, rsample)
 
 # --- Cargar ------------------------------------------------------------------
 
-train     <- readRDS(here(paths$processed, "train_model.rds"))
-train_pca <- readRDS(here(paths$processed, "train_pca.rds"))
+train <- readRDS(here(paths$processed, "train_model.rds"))
 
 # --- Convertir a sf y agregar log_price --------------------------------------
 
@@ -48,16 +46,7 @@ train_sf <- train |>
   st_as_sf(coords = c("lon", "lat"), crs = 4326, remove = FALSE) |>
   mutate(log_price = log(price))
 
-train_pca_sf <- train_pca |>
-  st_as_sf(coords = c("lon", "lat"), crs = 4326, remove = FALSE) |>
-  mutate(log_price = log(price))
-
 rownames(train_sf) <- seq_len(nrow(train_sf))
-rownames(train_pca_sf) <- seq_len(nrow(train_pca_sf))
-
-# Guardar versiones sf
-saveRDS(train_sf,     here(paths$processed, "train_sf.rds"))
-saveRDS(train_pca_sf, here(paths$processed, "train_pca_sf.rds"))
 
 # =============================================================
 # DIAGNÓSTICO: Chapinero en train
@@ -169,14 +158,6 @@ folds_norte <- manual_rset(
 message("CV norte     |  1 split (cluster norte como test)")
 
 # =============================================================
-# 6. CV PCA — k=5 estratificado, sobre train_pca_sf
-# =============================================================
-
-set.seed(SEED)
-folds_pca <- vfold_cv(train_pca_sf, v = CV_FOLDS, strata = LocCodigo)
-message("CV PCA       |  ", CV_FOLDS, " folds (estratificado por localidad)")
-
-# =============================================================
 # PESOS POR DISTANCIA A CHAPINERO
 # =============================================================
 # Lecture 13: la autocorrelación espacial implica que obs cercanas
@@ -214,57 +195,29 @@ message("  min: ",  round(min(dist_a_chapinero) / 1000, 2), " km")
 message("  mediana: ", round(median(dist_a_chapinero) / 1000, 2), " km")
 message("  max: ",  round(max(dist_a_chapinero) / 1000, 2), " km")
 
-# Kernel gaussiano con dos bandwidths
-bw_3km  <- 3000   # 3 km → focalizado en Chapinero y vecinos inmediatos
-bw_6km  <- 6000   # 6 km → cluster norte completo
+# Kernel gaussiano (bandwidth 6km → cluster norte completo)
+bw_6km  <- 6000
 
-pesos_gauss_3km <- exp(-(dist_a_chapinero^2) / (2 * bw_3km^2))
 pesos_gauss_6km <- exp(-(dist_a_chapinero^2) / (2 * bw_6km^2))
 
 # Normalizar: pesos suman n_train (convención para obsWeights en glmnet/ranger)
-n_train <- nrow(train_sf)
-pesos_3km <- pesos_gauss_3km / mean(pesos_gauss_3km)
-pesos_6km <- pesos_gauss_6km / mean(pesos_gauss_6km)
-
-# Pesos uniformes (baseline)
+n_train       <- nrow(train_sf)
+pesos_6km     <- pesos_gauss_6km / mean(pesos_gauss_6km)
 pesos_uniform <- rep(1, n_train)
-
-message("\nResumen pesos gaussianos (3km bandwidth):")
-message("  mean: ", round(mean(pesos_3km), 3),
-        "  min: ", round(min(pesos_3km), 4),
-        "  max: ", round(max(pesos_3km), 2))
-message("  Obs del cluster norte reciben peso promedio: ",
-        round(mean(pesos_3km[idx_norte]), 2))
-message("  Obs fuera del cluster reciben peso promedio: ",
-        round(mean(pesos_3km[idx_sur]), 3))
-
-# Verificar coherencia: las obs de Chapinero deben tener los pesos más altos
-top_pesos <- train_sf |>
-  st_drop_geometry() |>
-  mutate(peso_3km = pesos_3km) |>
-  group_by(LocNombre) |>
-  summarise(peso_medio = round(mean(peso_3km), 3)) |>
-  arrange(desc(peso_medio))
-
-message("\nPeso medio por localidad (bandwidth 3km):")
-print(top_pesos)
 
 # =============================================================
 # GUARDAR
 # =============================================================
 
-saveRDS(folds_std,         here(paths$processed, "folds_std.rds"))
-saveRDS(folds_global,      here(paths$processed, "folds_global.rds"))
-saveRDS(folds_spatial,     here(paths$processed, "folds_spatial.rds"))
-saveRDS(folds_spatial_upz, here(paths$processed, "folds_spatial_upz.rds"))
-saveRDS(folds_norte,       here(paths$processed, "folds_norte.rds"))
-saveRDS(folds_pca,         here(paths$processed, "folds_pca.rds"))
+saveRDS(folds_std,         here(paths$cv, "folds_std.rds"))
+saveRDS(folds_global,      here(paths$cv, "folds_global.rds"))
+saveRDS(folds_spatial,     here(paths$cv, "folds_spatial.rds"))
+saveRDS(folds_spatial_upz, here(paths$cv, "folds_spatial_upz.rds"))
+saveRDS(folds_norte,       here(paths$cv, "folds_norte.rds"))
 
-# Pesos guardados como vectores (usados en SL y modelos finales)
-saveRDS(pesos_3km,         here(paths$processed, "pesos_dist_3km.rds"))
-saveRDS(pesos_6km,         here(paths$processed, "pesos_dist_6km.rds"))
-saveRDS(pesos_uniform,     here(paths$processed, "pesos_uniform.rds"))
-saveRDS(dist_a_chapinero,  here(paths$processed, "dist_a_chapinero.rds"))
+# Pesos guardados como vectores (usados en SL)
+saveRDS(pesos_6km,     here(paths$cv, "pesos_dist_6km.rds"))
+saveRDS(pesos_uniform, here(paths$cv, "pesos_uniform.rds"))
 
 message("\n04_cv_setup.R")
 message("Resumen de folds disponibles:")
@@ -273,5 +226,18 @@ message("  folds_global       → k=5 estratificado por localidad")
 message("  folds_spatial      → leave-location-out (CV espacial del profe)")
 message("  folds_spatial_upz  → leave-UPZ-out (más granular)")
 message("  folds_norte        → cluster norte como test (mejor proxy Kaggle)")
-message("  folds_pca          → k=5 estratificado para dataset PCA")
-message("  pesos_3km / pesos_6km → kernel gaussiano centrado en Chapinero")
+message("  pesos_6km          → kernel gaussiano (bandwidth 6km) centrado en Chapinero")
+
+# --- Limpieza de objetos intermedios ----------------------------------------
+
+rm(
+  train_sf, train_m,
+  dist_loc, n_chap, pct_chap,
+  localidades_norte, idx_norte, idx_sur, n_norte, n_sur,
+  split_norte,
+  centroide_chapinero, dist_a_chapinero,
+  bw_6km, pesos_gauss_6km, n_train,
+  folds_std, folds_global, folds_spatial, folds_spatial_upz, folds_norte,
+  pesos_6km, pesos_uniform
+)
+gc()

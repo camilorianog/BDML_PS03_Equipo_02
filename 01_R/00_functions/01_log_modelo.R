@@ -2,11 +2,14 @@
 # Función para guardar detalles de modelo en un log general
 # 01_log_modelo.R
 
-log_modelo <- function(tuned, nombre, best = NULL) {
+log_modelo <- function(tuned = NULL, nombre, best = NULL, mae_directo = NULL) {
   tipo      <- strsplit(nombre, "_")[[1]][1]
 
-  # fit_resamples → collect_metrics | tune_grid → show_best
-  if (inherits(tuned, "tune_results")) {
+  # mae_directo → valor numérico explícito (p.ej. SuperLearner, ranger directo)
+  # fit_resamples → collect_metrics | tune_grid/tune_bayes → show_best
+  if (!is.null(mae_directo)) {
+    cv_mae <- mae_directo
+  } else if (inherits(tuned, "tune_results")) {
     cv_mae <- show_best(tuned, metric = "mae", n = 1) %>% pull(mean)
   } else {
     cv_mae <- collect_metrics(tuned) %>% filter(.metric == "mae") %>% pull(mean)

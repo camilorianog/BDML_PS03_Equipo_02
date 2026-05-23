@@ -43,3 +43,8 @@ test  <- test  |> mutate(across(all_of(vars_winsorizar), winsorizr))
 
 train <- train |> mutate(log_price = log(price))
 
+# --- Limpieza de objetos intermedios ----------------------------------------
+
+rm(excluir, vars_winsorizar, winsorizr)
+gc()
+

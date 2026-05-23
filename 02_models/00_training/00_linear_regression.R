@@ -3,25 +3,42 @@
 # 00_linear_regression.R
 # ============================================================
 
-# 1. CV ESPACIAL ---------------------------------------------
+# 1. DATOS ---------------------------------------------------
 
-train_sf <- st_as_sf(train, coords = c("lon", "lat"), crs = 4326, remove = FALSE) |>
-  st_transform(crs = 3116)
+if (exists("train", envir = .GlobalEnv)) {
+  train <- get("train", envir = .GlobalEnv)
+} else {
+  train <- readRDS(here(paths$processed, "train_model.rds"))
+}
+if (!"log_price" %in% names(train)) train$log_price <- log(train$price)
 
-set.seed(SEED)
-cv_folds <- spatial_block_cv(train_sf, v = CV_FOLDS, cellsize = 2000)
+if (exists("test", envir = .GlobalEnv)) {
+  test <- get("test", envir = .GlobalEnv)
+} else {
+  test <- readRDS(here(paths$processed, "test_model.rds"))
+}
 
-autoplot(cv_folds) + theme_minimal()  # verificar bloques geográficos
+# 2. CV ESPACIAL ---------------------------------------------
 
-# 2. RECIPE --------------------------------------------------
+if (exists("folds_spatial", envir = .GlobalEnv)) {
+  cv_folds <- get("folds_spatial", envir = .GlobalEnv)
+} else {
+  cv_folds <- readRDS(here(paths$cv, "folds_spatial.rds"))
+}
+
+# 3. RECIPE --------------------------------------------------
 
 recipe_lr <- recipe(log_price ~ ., data = train) |>
-  step_rm(property_id, description, title, price) |>
-  step_mutate(property_type = as.factor(property_type)) |>
+  step_rm(property_id, description, title, price,
+          any_of(c("geometry", "shape"))) |>
+  step_mutate(across(where(is.character), as.factor)) |>
   step_impute_median(all_numeric_predictors()) |>
-  step_dummy(all_nominal_predictors())
+  step_novel(all_nominal_predictors()) |>
+  step_dummy(all_nominal_predictors()) |>
+  step_lincomb(all_numeric_predictors()) |>
+  step_zv(all_predictors())
 
-# 3. SPEC + WORKFLOW -----------------------------------------
+# 4. SPEC + WORKFLOW -----------------------------------------
 
 wf_lr <- workflow() |>
   add_recipe(recipe_lr) |>
@@ -29,7 +46,7 @@ wf_lr <- workflow() |>
     linear_reg() |> set_engine("lm") |> set_mode("regression")
   )
 
-# 4. CV ------------------------------------------------------
+# 5. CV ------------------------------------------------------
 
 cv_results_lr <- fit_resamples(
   wf_lr,
@@ -39,7 +56,7 @@ cv_results_lr <- fit_resamples(
 
 collect_metrics(cv_results_lr)
 
-# 5. MODELO FINAL + LOG + SUBMISSION -------------------------
+# 6. MODELO FINAL + LOG + SUBMISSION -------------------------
 
 modelo_lr <- wf_lr |> fit(train)
 nombre_lr <- "LR_base"

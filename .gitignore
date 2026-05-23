@@ -12,3 +12,4 @@
 00_data/00_raw/*.shx
 00_data/00_raw/*.cpg
 00_data/00_raw/*.prj
+00_data/01_process/02a_spatial_variables_assets/*

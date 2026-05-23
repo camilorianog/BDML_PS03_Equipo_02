@@ -52,6 +52,11 @@ if (exists("train", envir = .GlobalEnv)) {
   )
 }
 
+if (!"log_price" %in% names(train)) {
+  train$log_price <- log(train$price)
+}
+
+
 if (exists("test", envir = .GlobalEnv)) {
   test <- prepare_modeling_tbl(get("test", envir = .GlobalEnv))
 } else if (file.exists(here(paths$processed, "test_model.rds"))) {
@@ -78,7 +83,7 @@ if (!CV_SET %in% valid_cv_sets) {
 if (exists(CV_SET, envir = .GlobalEnv)) {
   cv_folds <- get(CV_SET, envir = .GlobalEnv)
 } else {
-  cv_path <- here(paths$processed, paste0(CV_SET, ".rds"))
+  cv_path <- here(paths$cv, paste0(CV_SET, ".rds"))
   if (!file.exists(cv_path)) {
     stop(
       "No hay '", CV_SET, "' en memoria ni ", CV_SET, ".rds. ",
@@ -99,16 +104,19 @@ message(
 
 # --- Recipe ------------------------------------------------------------------
 
-recipe_nn <- recipe(price ~ ., data = train) |>
-  step_log(price, base = exp(1)) |>
+recipe_nn <- recipe(log_price ~ ., data = train) |>
   step_rm(
-    property_id, description, title,
+    property_id, description, title, price,
     any_of(c("geometry", "shape"))
   ) |>
-  step_mutate(property_type = as.factor(property_type)) |>
+  step_mutate(
+    across(where(is.integer),   as.numeric),
+    across(where(is.character), as.factor)
+  ) |>
   step_impute_median(all_numeric_predictors()) |>
   step_novel(all_nominal_predictors()) |>
   step_dummy(all_nominal_predictors()) |>
+  step_lincomb(all_numeric_predictors()) |>
   step_zv(all_predictors()) |>
   step_normalize(all_numeric_predictors())
 
@@ -162,7 +170,7 @@ nombre_nn <- nm("BRU", tibble(
 ))
 
 log_modelo(cv_results_nn, nombre_nn)
-generar_submission(modelo_nn, nombre_nn, log_scale = TRUE)
+generar_submission(modelo_nn, nombre_nn, log_scale = FALSE)
 
 # ============================================================
 # OPCIONAL: tune_grid

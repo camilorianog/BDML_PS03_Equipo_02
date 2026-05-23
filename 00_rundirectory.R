@@ -27,7 +27,7 @@ p_load(
   osmdata,
   
   # Modelado
-  caret, glmnet, naivebayes, ranger, xgboost, lightgbm, bonsai, rlang, tidymodels, spatialsample, recipes, brulee,
+  caret, glmnet, naivebayes, ranger, xgboost, lightgbm, bonsai, rlang, tidymodels, spatialsample, recipes, brulee, finetune,
   
   # Métricas
   yardstick, MLmetrics, 
@@ -53,6 +53,7 @@ paths <- list(
   competition = here("00_data", "00_raw","00_competition"),
   process     = here("00_data", "01_process"),
   processed   = here("00_data", "01_processed"),
+  cv          = here("00_data", "02_cv"),
   functions   = here("01_R",    "00_functions"),
   models      = here("02_models"),
   training    = here("02_models", "00_training"),
@@ -98,10 +99,6 @@ tic("Imputación")
 source(here(paths$process, "03_imputation.R"))
 toc(log = TRUE)
 
-## 2. Feature Engineering  ---------------------------------------------------
-
-# WIP
-
 ## 3. CV (tidymodels) --------------------------------------------------------
 
 tic("CV setup")
@@ -110,34 +107,36 @@ toc(log = TRUE)
 
 ## 4. Modelado ---------------------------------------------------------------
 
-tic("1. Regresión lineal")
+tic("0. Regresión lineal")
 source(here(paths$training, "00_linear_regression.R"))
 toc(log = TRUE)
 
-tic("2. Elastic Net")
+tic("1. Elastic Net")
 source(here(paths$training, "01_elastic_net.R"))
 toc(log = TRUE)
 
-tic("3. CART")
-source(here(paths$training, "02_cart.R"))
+tic("2. Regression Trees")
+source(here(paths$training, "02_regression_trees.R"))
 toc(log = TRUE)
 
-tic("4. Random Forest")
+tic("3. Random Forest")
 source(here(paths$training, "03_random_forest.R"))
+toc(log = TRUE)
+
+tic("4. Boost")
+source(here(paths$training, "04_boosting.R"))
 toc(log = TRUE)
 
 tic("5. Red neuronal")
 source(here(paths$training, "05_neural_network.R"))
 toc(log = TRUE)
 
-tic("6. Boost")
-source(here(paths$training, "07_models_boost.R"))
-toc(log = TRUE)
-
-tic("7. Super Learner / Stacking")
-source(here(paths$training, "09_models_sl.R"))
+tic("6. Super Learner / Stacking")
+source(here(paths$training, "06_super_learning.R"))
 toc(log = TRUE)
 
 ## 5. Analisis presentación --------------------------------------------------
 
-
+tic("7. Análisis presentación")
+source(here("03_pres", "00_analysis.R"))
+toc(log = TRUE)
