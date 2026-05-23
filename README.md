@@ -59,7 +59,9 @@ Los datos crudos deben descargarse manualmente desde Kaggle antes de ejecutar el
 # kaggle competitions download -c uniandes-bdml-2026-10-ps3
 ## Datos Externos Geoespaciales
 
-Además de los datos originales de Properati, el proyecto incorpora múltiples capas geoespaciales externas provenientes de Datos Abiertos Bogotá. Estas capas permiten construir variables espaciales y administrativas críticas para mejorar la capacidad de generalización del modelo hacia Chapinero. Se dejaron cargadas en raw data los datos de UPZ y de Localidades. El de manzanas por lo pesado se deja claro el proceso de descarga.
+Además de los datos originales de Properati, el proyecto incorpora múltiples capas geoespaciales externas provenientes de Datos Abiertos Bogotá.
+Estas capas permiten construir variables espaciales y administrativas críticas para mejorar la capacidad de generalización del modelo hacia Chapinero.
+Se dejaron cargadas en raw data los datos de UPZ y de Localidades. El de manzanas por lo pesado se deja claro el proceso de descarga.
 
 # 2.1. Estratificación Socioeconómica
 
