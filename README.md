@@ -189,24 +189,45 @@ El script maestro ejecuta secuencialmente:
 │   │   ├── Loca.*
 │   │   ├── ManzanaEstratificacion.*
 │   │   │
+│   │   └── osm_cache/
+│   │       ├── amenity_bank.rds
+│   │       ├── amenity_bus_station.rds
+│   │       ├── amenity_cafe.rds
+│   │       ├── amenity_hospital.rds
+│   │       ├── amenity_pharmacy.rds
+│   │       ├── amenity_restaurant.rds
+│   │       ├── amenity_school.rds
+│   │       ├── amenity_university.rds
+│   │       ├── highway_street_lamp.rds
+│   │       ├── landuse_residential_poly.rds
+│   │       ├── leisure_fitness_centre.rds
+│   │       ├── leisure_park_poly.rds
+│   │       ├── railway_station.rds
+│   │       └── shop_supermarket.rds
 │   │
 │   ├── 01_process/
 │   │   ├── 00_clean.R
 │   │   ├── 01_text_variables.R
 │   │   ├── 02_spatial_variables.R
+│   │   ├── 02a_spatial_variables_assets/
+│   │   │   ├── 01_estratos/    (ManzanaEstratificacion.*)
+│   │   │   ├── 02_UPZ/         (EPT_UPZ.*)
+│   │   │   └── 03_localidades/ (Loca.*)
 │   │   ├── 03_imputation.R
-│   │   ├── 04_cv_setup.R
-│   │   └── 10_analysis.R
+│   │   └── 04_cv_setup.R
 │   │
-│   └── 01_processed/
-│       ├── train_model.rds
-│       ├── test_model.rds
-│       ├── train_sf.rds
-│       ├── train_spatial.rds
+│   ├── 01_processed/
+│   │   ├── train_model.rds
+│   │   └── test_model.rds
+│   │
+│   └── 02_cv/
+│       ├── folds_global.rds
+│       ├── folds_norte.rds
 │       ├── folds_spatial.rds
+│       ├── folds_spatial_upz.rds
 │       ├── folds_std.rds
-│       ├── pca_object.rds
-│       └── ...
+│       ├── pesos_dist_6km.rds
+│       └── pesos_uniform.rds
 │
 ├── 01_R/
 │   └── 00_functions/
@@ -219,19 +240,11 @@ El script maestro ejecuta secuencialmente:
 │   ├── 00_training/
 │   │   ├── 00_linear_regression.R
 │   │   ├── 01_elastic_net.R
-│   │   ├── 02_cart.R
+│   │   ├── 02_regression_trees.R
 │   │   ├── 03_random_forest.R
+│   │   ├── 04_boosting.R
 │   │   ├── 05_neural_network.R
-│   │   ├── 07_models_boost.R
-│   │   ├── 09_models_sl.R
-│   │   └── xgb_best_model_analysis.rds
-│   │
-│   ├── 00_classes/
-│   │   ├── fit_xgb.rds
-│   │   ├── fit_enet.rds
-│   │   ├── cv_xgb.rds
-│   │   ├── cv_enet.rds
-│   │   └── best_xgb.rds
+│   │   └── 06_super_learning.R
 │   │
 │   └── 01_submissions/
 │       ├── 00_linear_regression/
@@ -244,8 +257,10 @@ El script maestro ejecuta secuencialmente:
 │       └── submission_log.csv
 │
 └── 03_pres/
+    ├── 00_analysis.R
     ├── figures/
-    └── tables/
+    ├── tables/
+    └── *.png  (figuras exportadas directamente)
 ```
 
 ---
@@ -287,9 +302,9 @@ Datos crudos
     ↓
 04_cv_setup.R
     ↓
-Entrenamiento de modelos
+Entrenamiento de modelos (00_linear_regression → 06_super_learning)
     ↓
-10_analysis.R
+03_pres/00_analysis.R
     ↓
 Tablas y figuras finales
 ```
@@ -300,19 +315,19 @@ Tablas y figuras finales
 
 | Etapa | Script | Propósito | Outputs principales |
 |---|---|---|---|
-| 1 | `00_clean.R` | Limpieza base de Properati | `train_sf.rds`, `test_spatial.rds` |
-| 2 | `01_text_variables.R` | Variables derivadas desde texto | Features NLP |
-| 3 | `02_spatial_variables.R` | Variables espaciales OSM + joins | Variables espaciales |
-| 4 | `03_imputation.R` | Imputación y flags de missing | `train_model.rds`, `test_model.rds` |
-| 5 | `04_cv_setup.R` | Construcción de folds espaciales | `folds_spatial.rds`, `folds_std.rds` |
-| 6 | `00_linear_regression.R` | Benchmarks lineales | submissions OLS |
-| 7 | `01_elastic_net.R` | Elastic Net | `fit_enet.rds`, `cv_enet.rds` |
-| 8 | `02_cart.R` | Árboles CART | submissions CART |
-| 9 | `03_random_forest.R` | Random Forest | submissions RF |
-| 10 | `05_neural_network.R` | Redes neuronales | submissions NN |
-| 11 | `07_models_boost.R` | XGBoost + Bayesian Optimization | `fit_xgb.rds`, `cv_xgb.rds` |
-| 12 | `09_models_sl.R` | Super Learner / Stacking | ensemble submissions |
-| 13 | `10_analysis.R` | Generación de outputs del deck | figuras y tablas finales |
+| 1 | `00_data/01_process/00_clean.R` | Limpieza base de Properati | `train_model.rds`, `test_model.rds` |
+| 2 | `00_data/01_process/01_text_variables.R` | Variables derivadas desde texto | Features NLP |
+| 3 | `00_data/01_process/02_spatial_variables.R` | Variables espaciales OSM + joins | Variables espaciales |
+| 4 | `00_data/01_process/03_imputation.R` | Imputación y flags de missing | `train_model.rds`, `test_model.rds` |
+| 5 | `00_data/01_process/04_cv_setup.R` | Construcción de folds | `folds_spatial.rds`, `folds_std.rds`, `folds_norte.rds`, `folds_spatial_upz.rds` |
+| 6 | `02_models/00_training/00_linear_regression.R` | Benchmarks lineales | submissions OLS |
+| 7 | `02_models/00_training/01_elastic_net.R` | Elastic Net | submissions EN |
+| 8 | `02_models/00_training/02_regression_trees.R` | Árboles CART | submissions CART |
+| 9 | `02_models/00_training/03_random_forest.R` | Random Forest | submissions RF |
+| 10 | `02_models/00_training/04_boosting.R` | XGBoost + Bayesian Optimization | submissions XGB |
+| 11 | `02_models/00_training/05_neural_network.R` | Redes neuronales (brulee/torch) | submissions NN |
+| 12 | `02_models/00_training/06_super_learning.R` | Super Learner / Stacking | ensemble submissions |
+| 13 | `03_pres/00_analysis.R` | Análisis profundo del mejor modelo | figuras y tablas finales |
 
 ---
 
@@ -365,32 +380,39 @@ Ubicación:
 03_pres/figures/
 ```
 
+Ubicación: `03_pres/`
+
 | Figura | Descripción |
 |---|---|
 | `benchmark_models.png` | Comparación de desempeño entre modelos |
 | `spatial_gap.png` | Gap entre CV estándar y espacial |
 | `feature_group_importance.png` | Importancia por grupos de features |
 | `shap_importance.png` | Importancia SHAP |
-| `shap_summary_top25.png` | Top variables SHAP |
+| `shap_directionality.png` | Direccionalidad de variables SHAP |
+| `shap_summary_top25.png` | Top 25 variables SHAP |
 | `bias_by_estrato.png` | Sesgo por estrato |
-| `bias_by_localidad_top15.png` | Error territorial |
+| `bias_by_localidad_top15.png` | Error territorial por localidad |
 | `map_error_spatial.png` | Mapa espacial del error |
+| `map_error_norte.png` | Mapa de error — holdout norte |
+| `map_error_upz.png` | Mapa de error por UPZ |
+| `error_vs_price.png` | Error vs precio observado |
 | `catastrophic_error_summary.png` | Resumen de errores críticos |
 | `calibration_plot.png` | Diagnóstico de calibración |
 | `xgb_gain_importance.png` | Gain importance XGBoost |
+| `tabla_cv_performance.png` | Tabla de performance (imagen) |
+| `tabla_cv_risk.png` | Tabla de riesgo (imagen) |
+| `tabla_gap_spatial.png` | Tabla gap espacial (imagen) |
+| `tabla_mae_folds.png` | Tabla MAE por fold (imagen) |
 
 ---
 
 # Tablas Exportadas
 
-Ubicación:
-
-```text
-03_pres/tables/
-```
+Ubicación: `03_pres/` y `03_pres/tables/`
 
 | Tabla | Contenido |
 |---|---|
+| `benchmark_models.csv` | Métricas de benchmark por modelo |
 | `tabla_cv_performance.csv` | Performance general de modelos |
 | `tabla_cv_risk.csv` | Riesgo de overprediction |
 | `tabla_gap_spatial.csv` | Gap entre CV random y espacial |
@@ -525,13 +547,14 @@ Se comparan múltiples modelos de regresión usando MAE como métrica principal.
 
 ## CV espacial
 
-* spatial block CV,
-* holdout norte,
-* evaluación territorial por localidad y UPZ.
+Cuatro esquemas implementados en `00_data/02_cv/`:
 
-Objetivo:
+* `folds_spatial.rds` — spatial block CV por localidad (`group_vfold_cv`)
+* `folds_spatial_upz.rds` — spatial block CV por UPZ (`group_vfold_cv`)
+* `folds_norte.rds` — holdout norte manual (`manual_rset`)
+* `pesos_dist_6km.rds` / `pesos_uniform.rds` — pesos de distancia para CV ponderado
 
-medir capacidad real de generalización espacial hacia Chapinero.
+Objetivo: medir capacidad real de generalización espacial hacia Chapinero.
 
 ---
 
