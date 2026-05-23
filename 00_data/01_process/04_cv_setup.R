@@ -52,6 +52,9 @@ train_pca_sf <- train_pca |>
   st_as_sf(coords = c("lon", "lat"), crs = 4326, remove = FALSE) |>
   mutate(log_price = log(price))
 
+rownames(train_sf) <- seq_len(nrow(train_sf))
+rownames(train_pca_sf) <- seq_len(nrow(train_pca_sf))
+
 # Guardar versiones sf
 saveRDS(train_sf,     here(paths$processed, "train_sf.rds"))
 saveRDS(train_pca_sf, here(paths$processed, "train_pca_sf.rds"))

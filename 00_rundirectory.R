@@ -110,12 +110,32 @@ toc(log = TRUE)
 
 ## 4. Modelado ---------------------------------------------------------------
 
-tic(" 1. Regresión lineal")
+tic("1. Regresión lineal")
 source(here(paths$training, "00_linear_regression.R"))
 toc(log = TRUE)
 
-tic(" 5. Red neuronal (brulee)")
+tic("2. Elastic Net")
+source(here(paths$training, "01_elastic_net.R"))
+toc(log = TRUE)
+
+tic("3. CART")
+source(here(paths$training, "02_cart.R"))
+toc(log = TRUE)
+
+tic("4. Random Forest")
+source(here(paths$training, "03_random_forest.R"))
+toc(log = TRUE)
+
+tic("5. Red neuronal")
 source(here(paths$training, "05_neural_network.R"))
+toc(log = TRUE)
+
+tic("6. Boost")
+source(here(paths$training, "07_models_boost.R"))
+toc(log = TRUE)
+
+tic("7. Super Learner / Stacking")
+source(here(paths$training, "09_models_sl.R"))
 toc(log = TRUE)
 
 ## 5. Analisis presentación --------------------------------------------------
