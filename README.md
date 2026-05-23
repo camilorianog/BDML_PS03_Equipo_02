@@ -59,13 +59,13 @@ Los datos crudos deben descargarse manualmente desde Kaggle antes de ejecutar el
 # kaggle competitions download -c uniandes-bdml-2026-10-ps3
 ## Datos Externos Geoespaciales
 
-Además de los datos originales de Properati, el proyecto incorpora múltiples capas geoespaciales externas provenientes de Datos Abiertos Bogotá. Estas capas permiten construir variables espaciales y administrativas críticas para mejorar la capacidad de generalización del modelo hacia Chapinero.
+Además de los datos originales de Properati, el proyecto incorpora múltiples capas geoespaciales externas provenientes de Datos Abiertos Bogotá. Estas capas permiten construir variables espaciales y administrativas críticas para mejorar la capacidad de generalización del modelo hacia Chapinero. Se dejaron cargadas en raw data los datos de UPZ y de Localidades. El de manzanas por lo pesado se deja claro el proceso de descarga.
 
 # 2.1. Estratificación Socioeconómica
 
 Fuente oficial:
 
-[Datos Abiertos Bogotá — Estratificación para Bogotá](https://datosabiertos.bogota.gov.co/dataset/estratificacion-para-bogota?utm_source=chatgpt.com)
+[Datos Abiertos Bogotá — Estratificación para Bogotá](https://datosabiertos.bogota.gov.co/dataset/estratificacion-para-bogota?)
 
 Archivo utilizado:
 
@@ -75,7 +75,7 @@ ManzanaEstratificacion.shp
 
 Fuente oficial:
 
-[Datos Abiertos Bogotá — Espacio Público Total por UPZ 2021](https://datosabiertos.bogota.gov.co/en/dataset/espacio-publico-total-upz-2021?utm_source=chatgpt.com)
+[Datos Abiertos Bogotá — Espacio Público Total por UPZ 2021](https://datosabiertos.bogota.gov.co/en/dataset/espacio-publico-total-upz-2021?)
 
 Archivo utilizado:
 
@@ -86,7 +86,7 @@ EPT_UPZ.shp
 
 Fuente oficial:
 
-[Datos Abiertos Bogotá — Localidades Bogotá D.C.](https://datosabiertos.bogota.gov.co/dataset/localidad-bogota-d-c?utm_source=chatgpt.com)
+[Datos Abiertos Bogotá — Localidades Bogotá D.C.](https://datosabiertos.bogota.gov.co/dataset/localidad-bogota-d-c?)
 
 Archivo utilizado:
 
@@ -193,16 +193,6 @@ Composición:
 
 * 97.3% apartamentos
 * 2.7% casas
-
----
-
-# Desafío Central
-
-El principal reto metodológico es que:
-
-> Solo ~0.8% del train pertenece a Chapinero.
-
-Esto implica que el modelo debe aprender relaciones espaciales desde otras localidades y transferirlas exitosamente hacia una zona premium con distribución distinta de precios.
 
 ---
 
@@ -404,27 +394,6 @@ Esto sugiere que:
 * El modelo generaliza razonablemente bien dentro de Bogotá
 * El riesgo aumenta en zonas premium similares a Chapinero
 * El error real podría ser mayor al estimado por CV estándar
-
----
-
-# Implicaciones de Negocio
-
-El análisis de errores muestra:
-
-* 55% de overprediction
-* 45% de underprediction
-
-Dado que sobrepagar destruye capital, se recomienda:
-
-```text
-Comprar solo si:
-precio_lista < predicción × 0.90
-```
-
-Además:
-
-* Evitar propiedades > COP $1.2B
-* Utilizar el modelo como herramienta de screening y no valoración definitiva
 
 ---
 
