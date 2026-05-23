@@ -52,67 +52,120 @@ Construir y evaluar modelos de predicción de precios de vivienda capaces de:
 * RStudio recomendado
 * Kaggle API configurado (opcional)
 
-Los datos crudos deben descargarse manualmente desde Kaggle antes de ejecutar el pipeline y desde fuentes externas acá registradas.
+---
+
+## 1. Descargar datos de la competencia
 
 ```r
-# 1. Descargar datos desde Kaggle
 # kaggle competitions download -c uniandes-bdml-2026-10-ps3
-## Datos Externos Geoespaciales
+```
 
-Además de los datos originales de Properati, el proyecto incorpora múltiples capas geoespaciales externas provenientes de Datos Abiertos Bogotá.
-Estas capas permiten construir variables espaciales y administrativas críticas para mejorar la capacidad de generalización del modelo hacia Chapinero.
-Se dejaron cargadas en raw data los datos de UPZ y de Localidades. El de manzanas por lo pesado se deja claro el proceso de descarga.
+Los archivos de la competencia deben almacenarse en:
 
-# 2.1. Estratificación Socioeconómica
+```text
+00_data/00_raw/00_competition/
+```
 
-Fuente oficial:
+Archivos esperados:
 
-[Datos Abiertos Bogotá — Estratificación para Bogotá](https://datosabiertos.bogota.gov.co/dataset/estratificacion-para-bogota?)
+```text
+train.csv
+test.csv
+submission_template.csv
+```
 
-Archivo utilizado:
+---
 
-ManzanaEstratificacion.shp
+## 2. Descargar datos geoespaciales externos
 
-## 2.2. UPZ (Unidades de Planeamiento Zonal)
+Además de los datos originales de Properati, el proyecto incorpora múltiples capas geoespaciales oficiales de Bogotá D.C. utilizadas para construir variables espaciales, administrativas y de validación territorial.
 
-Fuente oficial:
+Los shapefiles deben descargarse manualmente y almacenarse en:
 
-[Datos Abiertos Bogotá — Espacio Público Total por UPZ 2021](https://datosabiertos.bogota.gov.co/en/dataset/espacio-publico-total-upz-2021?)
-
-Archivo utilizado:
-
-EPT_UPZ.shp
-
-
-### 3. Localidades de Bogotá D.C.
-
-Fuente oficial:
-
-[Datos Abiertos Bogotá — Localidades Bogotá D.C.](https://datosabiertos.bogota.gov.co/dataset/localidad-bogota-d-c?)
-
-Archivo utilizado:
-
-Loca.shp
-
-# 2. Los shapefiles deben descargarse manualmente y almacenarse dentro de:
-
+```text
 00_data/00_raw/
+```
 
+---
 
-# 3. Ejecutar pipeline maestro
+### 2.1 Estratificación Socioeconómica
+
+Fuente oficial:
+
+https://datosabiertos.bogota.gov.co/dataset/estratificacion-para-bogota
+
+Archivo utilizado:
+
+```text
+ManzanaEstratificacion.shp
+```
+
+Uso dentro del pipeline:
+
+* asignación de estrato mediante spatial join
+* construcción de variables socioeconómicas espaciales
+* análisis de sesgo por estrato
+
+---
+
+### 2.2 UPZ — Unidades de Planeamiento Zonal
+
+Fuente oficial:
+
+https://datosabiertos.bogota.gov.co/en/dataset/espacio-publico-total-upz-2021
+
+Archivo utilizado:
+
+```text
+EPT_UPZ.shp
+```
+
+Uso dentro del pipeline:
+
+* validación espacial
+* agrupación territorial
+* spatial cross-validation
+* análisis de error por zonas
+
+---
+
+### 2.3 Localidades de Bogotá D.C.
+
+Fuente oficial:
+
+https://datosabiertos.bogota.gov.co/dataset/localidad-bogota-d-c
+
+Archivo utilizado:
+
+```text
+Loca.shp
+```
+
+Uso dentro del pipeline:
+
+* joins administrativos
+* análisis territorial del error
+* construcción de variables de localización
+
+---
+
+## 3. Ejecutar pipeline completo
+
+```r
 source("00_rundirectory.R")
 ```
 
 El script maestro ejecuta secuencialmente:
 
-1. Limpieza y preparación de datos
-2. Construcción de variables espaciales y textuales
-3. Feature engineering
-4. Construcción de matrices de modelado
-5. Entrenamiento de modelos benchmark y avanzados
-6. Validación cruzada estándar y espacial
-7. Generación de submissions Kaggle
-8. Producción de tablas y figuras para presentación final
+1. Limpieza de datos
+2. Construcción de variables textuales
+3. Construcción de variables espaciales
+4. Imputación y creación de flags
+5. Construcción de folds espaciales
+6. Entrenamiento de modelos
+7. Validación cruzada
+8. Generación de submissions
+9. Producción de tablas y figuras finales
 
 ---
 
@@ -120,57 +173,232 @@ El script maestro ejecuta secuencialmente:
 
 ```text
 .
-├── 00_rundirectory.R                # Script maestro — punto de entrada
-├── BDML_PS03_Equipo_02.Rproj        # Proyecto de RStudio
+├── 00_rundirectory.R
+├── BDML_PS03_Equipo_02.Rproj
+├── README.md
 │
 ├── 00_data/
-│   ├── 00_raw/                      # Datos crudos + shapefiles + OSM cache
-│   └── 01_processed/                # Datos procesados y matrices finales
+│
+│   ├── 00_raw/
+│   │   ├── 00_competition/
+│   │   │   ├── train.csv
+│   │   │   ├── test.csv
+│   │   │   └── submission_template.csv
+│   │   │
+│   │   ├── EPT_UPZ.*
+│   │   ├── Loca.*
+│   │   ├── ManzanaEstratificacion.*
+│   │   │
+│   │
+│   ├── 01_process/
+│   │   ├── 00_clean.R
+│   │   ├── 01_text_variables.R
+│   │   ├── 02_spatial_variables.R
+│   │   ├── 03_imputation.R
+│   │   ├── 04_cv_setup.R
+│   │   └── 10_analysis.R
+│   │
+│   └── 01_processed/
+│       ├── train_model.rds
+│       ├── test_model.rds
+│       ├── train_sf.rds
+│       ├── train_spatial.rds
+│       ├── folds_spatial.rds
+│       ├── folds_std.rds
+│       ├── pca_object.rds
+│       └── ...
 │
 ├── 01_R/
-│   ├── 00_prep/
-│   │   ├── 00_clean.R               # Limpieza de datos Properati
-│   │   ├── 01_eda.R                 # Exploratory Data Analysis
-│   │   ├── 02_spatial_join.R        # Join espacial UPZ/localidad
-│   │   └── 03_text_cleaning.R       # Limpieza de texto
-│   │
-│   ├── 01_feat/
-│   │   ├── 00_text_features.R       # Variables desde descripción
-│   │   ├── 01_osm_features.R        # Variables espaciales OSM
-│   │   ├── 02_feature_engineering.R # Variables derivadas
-│   │   └── 03_missing_flags.R       # Indicadores de missings
-│   │
-│   ├── 02_functions/
-│   │   ├── 00_cv_spatial.R          # Spatial cross-validation
-│   │   ├── 01_model_metrics.R       # Métricas y evaluación
-│   │   ├── 02_save_model.R          # Guardado de modelos
-│   │   └── 03_submission.R          # Generación submissions Kaggle
-│   │
-│   └── 03_validation/
-│       ├── 00_spatial_gap.R         # Comparación CV espacial vs random
-│       └── 01_calibration.R         # Diagnóstico de calibración
+│   └── 00_functions/
+│       ├── 00_nm.R
+│       ├── 01_log_modelo.R
+│       └── 02_generar_submission.R
 │
 ├── 02_models/
+│
 │   ├── 00_training/
-│   │   ├── 01_OLS.R
-│   │   ├── 02_ElasticNet.R
-│   │   ├── 03_RandomForest.R
-│   │   ├── 04_XGBoost.R
-│   │   └── 05_SuperLearner.R
+│   │   ├── 00_linear_regression.R
+│   │   ├── 01_elastic_net.R
+│   │   ├── 02_cart.R
+│   │   ├── 03_random_forest.R
+│   │   ├── 05_neural_network.R
+│   │   ├── 07_models_boost.R
+│   │   ├── 09_models_sl.R
+│   │   └── xgb_best_model_analysis.rds
+│   │
+│   ├── 00_classes/
+│   │   ├── fit_xgb.rds
+│   │   ├── fit_enet.rds
+│   │   ├── cv_xgb.rds
+│   │   ├── cv_enet.rds
+│   │   └── best_xgb.rds
 │   │
 │   └── 01_submissions/
 │       ├── 00_linear_regression/
 │       ├── 01_elastic_net/
-│       ├── 02_xgboost/
+│       ├── 02_regression_trees/
 │       ├── 03_random_forest/
-│       └── 04_boosting/
+│       ├── 04_boosting/
+│       ├── 05_neural_networks/
+│       ├── 06_super_learners/
+│       └── submission_log.csv
 │
-├── 03_pres/
-│   ├── figures/                     # Figuras finales del deck
-│   └── tables/                      # Tablas exportadas
-│
-└── README.md
+└── 03_pres/
+    ├── figures/
+    └── tables/
 ```
+
+---
+
+# Pipeline de Replicación
+
+El proyecto está organizado como un pipeline modular ejecutado desde:
+
+```r
+source("00_rundirectory.R")
+```
+
+El script maestro:
+
+* carga paquetes,
+* crea carpetas automáticamente,
+* define rutas globales,
+* ejecuta limpieza,
+* genera features,
+* construye folds espaciales,
+* entrena modelos,
+* genera submissions,
+* exporta outputs finales.
+
+---
+
+# Flujo General del Proyecto
+
+```text
+Datos crudos
+    ↓
+00_clean.R
+    ↓
+01_text_variables.R
+    ↓
+02_spatial_variables.R
+    ↓
+03_imputation.R
+    ↓
+04_cv_setup.R
+    ↓
+Entrenamiento de modelos
+    ↓
+10_analysis.R
+    ↓
+Tablas y figuras finales
+```
+
+---
+
+# Orden de Ejecución y Mapeo de Outputs
+
+| Etapa | Script | Propósito | Outputs principales |
+|---|---|---|---|
+| 1 | `00_clean.R` | Limpieza base de Properati | `train_sf.rds`, `test_spatial.rds` |
+| 2 | `01_text_variables.R` | Variables derivadas desde texto | Features NLP |
+| 3 | `02_spatial_variables.R` | Variables espaciales OSM + joins | Variables espaciales |
+| 4 | `03_imputation.R` | Imputación y flags de missing | `train_model.rds`, `test_model.rds` |
+| 5 | `04_cv_setup.R` | Construcción de folds espaciales | `folds_spatial.rds`, `folds_std.rds` |
+| 6 | `00_linear_regression.R` | Benchmarks lineales | submissions OLS |
+| 7 | `01_elastic_net.R` | Elastic Net | `fit_enet.rds`, `cv_enet.rds` |
+| 8 | `02_cart.R` | Árboles CART | submissions CART |
+| 9 | `03_random_forest.R` | Random Forest | submissions RF |
+| 10 | `05_neural_network.R` | Redes neuronales | submissions NN |
+| 11 | `07_models_boost.R` | XGBoost + Bayesian Optimization | `fit_xgb.rds`, `cv_xgb.rds` |
+| 12 | `09_models_sl.R` | Super Learner / Stacking | ensemble submissions |
+| 13 | `10_analysis.R` | Generación de outputs del deck | figuras y tablas finales |
+
+---
+
+# Outputs Generados
+
+## Modelos entrenados
+
+Ubicación:
+
+```text
+02_models/00_classes/
+```
+
+Incluye:
+
+* workflows entrenados,
+* tune_results,
+* resample_results,
+* hiperparámetros óptimos,
+* objetos XGBoost,
+* resultados resumidos.
+
+---
+
+## Submissions Kaggle
+
+Ubicación:
+
+```text
+02_models/01_submissions/
+```
+
+Organizadas por familia de modelos:
+
+* regresiones lineales,
+* elastic net,
+* CART,
+* random forest,
+* boosting,
+* neural networks,
+* super learners.
+
+---
+
+# Figuras Exportadas
+
+Ubicación:
+
+```text
+03_pres/figures/
+```
+
+| Figura | Descripción |
+|---|---|
+| `benchmark_models.png` | Comparación de desempeño entre modelos |
+| `spatial_gap.png` | Gap entre CV estándar y espacial |
+| `feature_group_importance.png` | Importancia por grupos de features |
+| `shap_importance.png` | Importancia SHAP |
+| `shap_summary_top25.png` | Top variables SHAP |
+| `bias_by_estrato.png` | Sesgo por estrato |
+| `bias_by_localidad_top15.png` | Error territorial |
+| `map_error_spatial.png` | Mapa espacial del error |
+| `catastrophic_error_summary.png` | Resumen de errores críticos |
+| `calibration_plot.png` | Diagnóstico de calibración |
+| `xgb_gain_importance.png` | Gain importance XGBoost |
+
+---
+
+# Tablas Exportadas
+
+Ubicación:
+
+```text
+03_pres/tables/
+```
+
+| Tabla | Contenido |
+|---|---|
+| `tabla_cv_performance.csv` | Performance general de modelos |
+| `tabla_cv_risk.csv` | Riesgo de overprediction |
+| `tabla_gap_spatial.csv` | Gap entre CV random y espacial |
+| `tabla_mae_folds.csv` | MAE por fold |
+| `feature_group_importance.csv` | Importancia por grupos |
+| `risk_analysis.csv` | Evaluación económica del error |
+| `shap_summary.csv` | Variables SHAP |
+| `top_100_catastrophic_errors.csv` | Mayores errores del modelo |
 
 ---
 
@@ -180,21 +408,16 @@ El script maestro ejecuta secuencialmente:
 
 Kaggle — `uniandes-bdml-2026-10-ps3`
 
-Los datos provienen de Properati e incluyen anuncios de vivienda para Bogotá D.C.
+Datos de Properati para Bogotá D.C.
 
 | Dataset | Observaciones |
-| ------- | ------------- |
-| Train   | 38,644        |
-| Test    | 10,286        |
+|---|---|
+| Train | 38,644 |
+| Test | 10,286 |
 
 Período aproximado:
 
 * 2019–2021
-
-Composición:
-
-* 97.3% apartamentos
-* 2.7% casas
 
 ---
 
@@ -204,132 +427,111 @@ Composición:
 price
 ```
 
-Precio de oferta del inmueble en pesos colombianos (COP).
+Precio de oferta del inmueble en pesos colombianos.
 
 ---
 
 # Variables Utilizadas
 
-## 1. Características estructurales
+## 1. Variables estructurales
 
-Determinantes físicos directos del precio:
+Características físicas del inmueble:
 
-* surface_total
-* surface_covered
-* rooms
-* bedrooms
-* bathrooms
-* property_type
-* latitud / longitud
+* superficie,
+* habitaciones,
+* baños,
+* tipo de propiedad,
+* coordenadas,
+* área cubierta.
 
 ---
 
 ## 2. Variables derivadas de texto
 
-Se construyen utilizando procesamiento simple de texto sobre la descripción del inmueble.
+Construidas usando NLP básico sobre descripciones.
 
 Ejemplos:
 
-* ascensor
-* terraza
-* piscina
-* vigilancia
-* remodelado
-* chimenea
-* walk-in closet
-* vista
-* duplex
-
-Estas variables permiten capturar calidad y amenidades no observables en variables estructurales tradicionales.
+* terraza,
+* ascensor,
+* vigilancia,
+* remodelado,
+* duplex,
+* chimenea,
+* walk-in closet.
 
 ---
 
-# Justificación Económica
+## 3. Variables espaciales
 
-Siguiendo a Rosen (1974), el precio de la vivienda puede representarse como:
+Construidas desde OpenStreetMap.
 
-P = f(estructura,localizaci\acute{o}n,amenidades)
+Incluyen proximidad o densidad de:
 
-Las descripciones de los anuncios contienen señales relevantes sobre calidad, seguridad y amenities que afectan la disposición a pagar.
-
----
-
-## 3. Variables espaciales (OSM)
-
-Construidas desde OpenStreetMap:
-
-### Distancias
-
-* cafés
-* hospitales
-* parques
-* universidades
-* estaciones de transporte
-* supermercados
-* colegios
-
-### Densidades en buffers
-
-* restaurantes
-* bancos
-* gimnasios
-* farmacias
-
-Estas variables aproximan accesibilidad urbana y calidad del entorno.
+* hospitales,
+* universidades,
+* restaurantes,
+* parques,
+* cafés,
+* bancos,
+* supermercados,
+* gimnasios,
+* estaciones.
 
 ---
 
 ## 4. Variables administrativas
 
-* localidad
-* UPZ
-* estrato
-* proxies espaciales
+Construidas mediante joins espaciales:
 
-Capturan la fuerte segmentación territorial de Bogotá.
+* localidad,
+* UPZ,
+* estrato.
 
 ---
 
 ## 5. Missingness Flags
 
-Indicadores binarios del proceso de imputación:
+Indicadores binarios de imputación:
 
-* surface_missing
-* rooms_missing
-* upz_missing
-* stratum_missing
-
-Los patrones de missing pueden contener información económica relevante sobre calidad del anuncio y segmentación de mercado.
+* `surface_missing`
+* `rooms_missing`
+* `upz_missing`
+* `stratum_missing`
 
 ---
 
 # Metodología
 
-Se comparan múltiples modelos de regresión utilizando MAE como métrica principal.
+Se comparan múltiples modelos de regresión usando MAE como métrica principal.
 
-| # | Modelo        | Librería     | Notas                |
-| - | ------------- | ------------ | -------------------- |
-| 1 | OLS           | stats        | Benchmark lineal     |
-| 2 | Elastic Net   | glmnet       | Regularización L1/L2 |
-| 3 | Random Forest | ranger       | Ensamble de árboles  |
-| 4 | XGBoost       | xgboost      | Gradient boosting    |
-| 5 | Super Learner | SuperLearner | Ensemble final       |
+| Modelo | Librería | Tipo |
+|---|---|---|
+| OLS | stats | Benchmark |
+| Elastic Net | glmnet | Regularización |
+| CART | rpart | Árbol |
+| Random Forest | ranger | Ensemble |
+| XGBoost | xgboost | Boosting |
+| Neural Network | brulee | Deep learning |
+| Super Learner | custom ensemble | Stacking |
 
 ---
 
 # Validación Cruzada
 
-## Validación estándar
+## CV estándar
 
-* 5-fold random CV
+* 5-fold random cross-validation
 
-## Validación espacial
+## CV espacial
 
-* Leave-location-out CV
-* Holdout espacial northeast
-* Evaluación por localidad / UPZ
+* spatial block CV,
+* holdout norte,
+* evaluación territorial por localidad y UPZ.
 
-El objetivo es medir capacidad real de generalización espacial hacia Chapinero.
+Objetivo:
+
+medir capacidad real de generalización espacial hacia Chapinero.
 
 ---
 
@@ -349,7 +551,7 @@ Por lo tanto, el desempeño final converge efectivamente a un modelo XGBoost.
 
 ---
 
-## Hiperparámetros óptimos
+# Hiperparámetros Óptimos
 
 ```r
 nrounds          = 1000
@@ -374,10 +576,10 @@ min_child_weight = 10
 # Hallazgos Principales
 
 * Variables OSM y texto aportan aproximadamente 35% del poder predictivo
-* El contexto urbano importa tanto como las características físicas del inmueble
-* Bathrooms es la variable individual más importante
-* El modelo presenta buena calibración en rangos medios
-* En propiedades > COP $1.2B tiende a subestimar
+* El contexto urbano importa tanto como las características físicas
+* Bathrooms es la variable más importante
+* El modelo se calibra bien en rangos medios
+* El modelo tiende a subestimar propiedades premium
 
 ---
 
@@ -391,11 +593,6 @@ El northeast holdout presenta un deterioro aproximado de:
 
 respecto al CV aleatorio.
 
-Esto sugiere que:
-
-* El modelo generaliza razonablemente bien dentro de Bogotá
-* El riesgo aumenta en zonas premium similares a Chapinero
-* El error real podría ser mayor al estimado por CV estándar
 
 ---
 
@@ -409,15 +606,15 @@ Esto sugiere que:
 
 Instalados automáticamente mediante `pacman::p_load()`.
 
-| Categoría     | Paquetes                                     |
-| ------------- | -------------------------------------------- |
-| Datos         | tidyverse, data.table, janitor               |
-| Spatial       | sf, terra, osmdata, tmap                     |
-| ML            | caret, glmnet, ranger, xgboost, SuperLearner |
-| Texto         | tidytext, quanteda, stringr                  |
-| Métricas      | yardstick, MLmetrics                         |
-| Visualización | ggplot2, patchwork, viridis                  |
-| Tablas        | gt, kableExtra                               |
+| Categoría | Paquetes |
+|---|---|
+| Datos | tidyverse, janitor, skimr |
+| Spatial | sf, osmdata, spatialsample |
+| ML | caret, glmnet, ranger, xgboost, lightgbm, tidymodels |
+| Texto | tokenizers, stopwords, SnowballC |
+| Métricas | yardstick, MLmetrics |
+| Visualización | ggplot2, patchwork |
+| Tablas | gt, gtsummary |
 
 Si `pacman` no está instalado:
 
