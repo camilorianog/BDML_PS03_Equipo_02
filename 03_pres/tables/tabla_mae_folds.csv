@@ -1,0 +1,113 @@
+CV,Fold,MAE
+Random CV,1,76026891.7187217
+Random CV,2,75874418.21425799
+Random CV,3,76629895.40639152
+Random CV,4,75640501.83723639
+Random CV,5,76464584.76915114
+Random CV (proporción de localidad),1,76576203.18085381
+Random CV (proporción de localidad),2,75580074.82183982
+Random CV (proporción de localidad),3,75988817.96972442
+Random CV (proporción de localidad),4,75982858.77587992
+Random CV (proporción de localidad),5,76247482.68400621
+Spatial CV (leave-locality-out),1,62525724.571428575
+Spatial CV (leave-locality-out),2,63499899.96638656
+Spatial CV (leave-locality-out),3,68450002.6969697
+Spatial CV (leave-locality-out),4,69294090.76221499
+Spatial CV (leave-locality-out),5,72836650.25988701
+Spatial CV (leave-locality-out),6,61011225.507246375
+Spatial CV (leave-locality-out),7,60937768.22857143
+Spatial CV (leave-locality-out),8,74571943.10944206
+Spatial CV (leave-locality-out),9,77223391.56056449
+Spatial CV (leave-locality-out),10,72110036.63246669
+Spatial CV (leave-locality-out),11,68663746.20089956
+Spatial CV (leave-locality-out),12,74400789.44100198
+Spatial CV (leave-locality-out),13,73485202.04391892
+Spatial CV (leave-locality-out),14,74353338.40046838
+Spatial CV (leave-locality-out),15,70854948.16107382
+Spatial CV (leave-locality-out),16,74290744.35124864
+Spatial CV (leave-locality-out),17,74493608.14909886
+Spatial CV (leave-locality-out),18,72898163.97765364
+Spatial CV (leave-UPZ-out),1,65187818.32258064
+Spatial CV (leave-UPZ-out),2,61026033.623188406
+Spatial CV (leave-UPZ-out),3,62009038.7368421
+Spatial CV (leave-UPZ-out),4,60268204.6984127
+Spatial CV (leave-UPZ-out),5,48944087.27272727
+Spatial CV (leave-UPZ-out),6,68826114.69924812
+Spatial CV (leave-UPZ-out),7,68079715.32439679
+Spatial CV (leave-UPZ-out),8,56485084.952380955
+Spatial CV (leave-UPZ-out),9,68639362.81574804
+Spatial CV (leave-UPZ-out),10,74583552.50699301
+Spatial CV (leave-UPZ-out),11,67325364.9882353
+Spatial CV (leave-UPZ-out),12,76017939.34883721
+Spatial CV (leave-UPZ-out),13,65725089.52380952
+Spatial CV (leave-UPZ-out),14,73431089.65363128
+Spatial CV (leave-UPZ-out),15,70402092.21875
+Spatial CV (leave-UPZ-out),16,52290518.85714286
+Spatial CV (leave-UPZ-out),17,67675908.65206812
+Spatial CV (leave-UPZ-out),18,63068333.176470585
+Spatial CV (leave-UPZ-out),19,68120563.84367816
+Spatial CV (leave-UPZ-out),20,68785036.25076452
+Spatial CV (leave-UPZ-out),21,68373640.14578588
+Spatial CV (leave-UPZ-out),22,59271209.45454545
+Spatial CV (leave-UPZ-out),23,69599631.17318435
+Spatial CV (leave-UPZ-out),24,59999163.63636363
+Spatial CV (leave-UPZ-out),25,69576415.6462585
+Spatial CV (leave-UPZ-out),26,69208463.21243523
+Spatial CV (leave-UPZ-out),27,65995607.46666667
+Spatial CV (leave-UPZ-out),28,57890510.97872341
+Spatial CV (leave-UPZ-out),29,57949811.428571425
+Spatial CV (leave-UPZ-out),30,77186010.4393617
+Spatial CV (leave-UPZ-out),31,58751159.85454545
+Spatial CV (leave-UPZ-out),32,58294240
+Spatial CV (leave-UPZ-out),33,66717410.782608695
+Spatial CV (leave-UPZ-out),34,68836610.71328671
+Spatial CV (leave-UPZ-out),35,58128794.28571428
+Spatial CV (leave-UPZ-out),36,68422313.92975971
+Spatial CV (leave-UPZ-out),37,65018490.782608695
+Spatial CV (leave-UPZ-out),38,63195139.2
+Spatial CV (leave-UPZ-out),39,68151981.65581395
+Spatial CV (leave-UPZ-out),40,76926397.88818222
+Spatial CV (leave-UPZ-out),41,60535911.72413793
+Spatial CV (leave-UPZ-out),42,52885883.428571425
+Spatial CV (leave-UPZ-out),43,68700917.33333333
+Spatial CV (leave-UPZ-out),44,68002781.22167487
+Spatial CV (leave-UPZ-out),45,68658218.10650888
+Spatial CV (leave-UPZ-out),46,64437180.307692304
+Spatial CV (leave-UPZ-out),47,77937790.02739726
+Spatial CV (leave-UPZ-out),48,69192481.83333333
+Spatial CV (leave-UPZ-out),49,70730582.84
+Spatial CV (leave-UPZ-out),50,67771266.19895288
+Spatial CV (leave-UPZ-out),51,49975932.44444445
+Spatial CV (leave-UPZ-out),52,52623712
+Spatial CV (leave-UPZ-out),53,61777287.11111111
+Spatial CV (leave-UPZ-out),54,68500606.8859813
+Spatial CV (leave-UPZ-out),55,77209153.68257757
+Spatial CV (leave-UPZ-out),56,65767030.85714286
+Spatial CV (leave-UPZ-out),57,70587513.63522013
+Spatial CV (leave-UPZ-out),58,74067946.52645862
+Spatial CV (leave-UPZ-out),59,70601580.91428572
+Spatial CV (leave-UPZ-out),60,61210833.708737865
+Spatial CV (leave-UPZ-out),61,58834127.36
+Spatial CV (leave-UPZ-out),62,54965026.94736842
+Spatial CV (leave-UPZ-out),63,71576298.05714285
+Spatial CV (leave-UPZ-out),64,69505715.4601227
+Spatial CV (leave-UPZ-out),65,69293577.77777778
+Spatial CV (leave-UPZ-out),66,68558970.20689656
+Spatial CV (leave-UPZ-out),67,69652720.43478261
+Spatial CV (leave-UPZ-out),68,64526995.93442623
+Spatial CV (leave-UPZ-out),69,55642810.60240964
+Spatial CV (leave-UPZ-out),70,66924237.46428572
+Spatial CV (leave-UPZ-out),71,61928502.1754386
+Spatial CV (leave-UPZ-out),72,74838277.63522013
+Spatial CV (leave-UPZ-out),73,68567778.48062016
+Spatial CV (leave-UPZ-out),74,74469013.6091954
+Spatial CV (leave-UPZ-out),75,69318538.32258065
+Spatial CV (leave-UPZ-out),76,69711875.89090909
+Spatial CV (leave-UPZ-out),77,54700852.86956522
+Spatial CV (leave-UPZ-out),78,77825749.4736842
+Spatial CV (leave-UPZ-out),79,66330556.84140234
+Spatial CV (leave-UPZ-out),80,75528334.58239223
+Spatial CV (leave-UPZ-out),81,67839363.1790393
+Spatial CV (leave-UPZ-out),82,69899637.73134328
+Spatial CV (leave-UPZ-out),83,68622369.8
+Cluster NorEste Holdout,1,82258635.86218639
